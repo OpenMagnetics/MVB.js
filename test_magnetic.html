@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>OpenMagnetics Virtual Builder - Magnetic Tests</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #1a1a1a; color: #f0f0f0; }
+        .pass { color: #4caf50; }
+        .fail { color: #f44336; }
+        .info { color: #2196f3; }
+        .warn { color: #ff9800; }
+        pre { white-space: pre-wrap; margin: 0; line-height: 1.4; }
+        #output { padding: 10px; background: #2a2a2a; border-radius: 4px; }
+        h1 { color: #fff; }
+    </style>
+</head>
+<body>
+    <h1>OpenMagnetics Virtual Builder - Magnetic Tests</h1>
+    <div id="output"><pre id="log">Initializing...</pre></div>
+    
+    <script type="module">
+        // =================================================================
+        // Test Configuration - mirrors Python test_magnetic.py
+        // =================================================================
+        
+        // STL export options - coarser for faster testing
+        const stlOptions = { tolerance: 1.0, angularTolerance: 0.8, binary: true };
+        
+        // Test results
+        const testResults = [];
+        let totalTests = 0;
+        let passedTests = 0;
+        let failedTests = 0;
+        
+        // Path to test data (relative to MVB root)
+        const TEST_DATA_PATH = '/testData';
+        
+        function log(msg, isPass = null, isWarn = false) {
+            const logEl = document.getElementById('log');
+            let className = '';
+            if (isPass === true) className = 'pass';
+            else if (isPass === false) className = 'fail';
+            else if (isWarn) className = 'warn';
+            else className = 'info';
+            logEl.innerHTML += `<span class="${className}">${msg}</span>\n`;
+            console.log(msg);
+        }
+        
+        async function downloadBlob(filename, blob) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            
+            // Store for Puppeteer to collect
+            if (!window.stlFiles) window.stlFiles = [];
+            window.stlFiles.push({ filename, blob });
+            
+            // If running in Puppeteer, save immediately
+            if (window.saveFile) {
+                try {
+                    const reader = new FileReader();
+                    const base64 = await new Promise((resolve) => {
+                        reader.onload = () => resolve(reader.result.split(',')[1]);
+                        reader.readAsDataURL(blob);
+                    });
+                    await window.saveFile(filename, base64);
+                } catch (e) {
+                    console.error('Failed to save:', filename, e);
+                }
+            }
+        }
+
+        // =================================================================
+        // Test Runner - mirrors Python _run_test() method
+        // =================================================================
+        
+        async function runMagneticTest(replicad, builder, masFilename, validateGeometry = false) {
+            // Load the MAS JSON file
+            const response = await fetch(`${TEST_DATA_PATH}/${masFilename}`);
+            if (!response.ok) {
+                throw new Error(`Failed to load ${masFilename}: ${response.statusText}`);
+            }
+            const masData = await response.json();
+            
+            // Get magnetic data
+            const magneticData = masData.magnetic || masData;
+            const outputName = masFilename.replace('.json', '');
+            
+            // Build the magnetic component
+            // Geometry is now returned in mm (SCALE units) for efficient STL export
+            const shape = builder.getMagnetic(magneticData, outputName);
+            
+            if (!shape) {
+                throw new Error('getMagnetic returned null');
+            }
+            
+            // Export to STL directly - geometry is already in mm
+            const stl = shape.blobSTL(stlOptions);
+            downloadBlob(`${outputName}.stl`, stl);
+            
+            log(`    STL size: ${stl.size} bytes`);
+            
+            return {
+                shape,
+                stlSize: stl.size,
+                masData
+            };
+        }
+
+        // =================================================================
+        // Main Test Execution
+        // =================================================================
+        
+        async function runTests() {
+            log('Initializing OpenCASCADE.js...');
+            log('Loading WASM (takes 10-20 seconds)...');
+            
+            try {
+                // Import replicad with proper OpenCASCADE initialization
+                const replicad = await import('/node_modules/replicad/dist/replicad.js');
+                const opencascade = await import('/node_modules/replicad-opencascadejs/src/replicad_single.js');
+                
+                // Initialize OpenCASCADE with explicit WASM path
+                const oc = await opencascade.default({
+                    locateFile: (file) => `/node_modules/replicad-opencascadejs/src/${file}`
+                });
+                replicad.setOC(oc);
+                log('✓ OpenCASCADE.js loaded!', true);
+                
+                // Import our builder
+                const { ReplicadBuilder } = await import('/src/index.js');
+                log('✓ ReplicadBuilder loaded!', true);
+                
+                const builder = new ReplicadBuilder(replicad);
+
+                // =============================================================
+                // Toroidal Tests - mirrors Python TestToroidal class
+                // =============================================================
+                
+                log('\n========================================');
+                log('Toroidal Tests');
+                log('========================================');
+                
+                // test_toroidal_single_turn_with_core
+                await runTest('test_toroidal_single_turn_with_core', async () => {
+                    const result = await runMagneticTest(replicad, builder, 'toroidal_one_turn.json', true);
+                    return result.stlSize > 100;
+                });
+                
+                // test_toroidal_two_turns_spread
+                await runTest('test_toroidal_two_turns_spread', async () => {
+                    const result = await runMagneticTest(replicad, builder, 'toroidal_two_turns_spread.json', true);
+                    return result.stlSize > 100;
+                });
+                
+                // test_toroidal_two_turns_centered
+                await runTest('test_toroidal_two_turns_centered', async () => {
+                    const result = await runMagneticTest(replicad, builder, 'toroidal_two_turns_centered.json', true);
+                    return result.stlSize > 100;
+                });
+                
+                // test_toroidal_full_layer
+                await runTest('test_toroidal_full_layer', async () => {
+                    const result = await runMagneticTest(replicad, builder, 'toroidal_full_layer.json', true);
+                    return result.stlSize > 100;
+                });
+                
+                // test_toroidal_multilayer
+                await runTest('test_toroidal_multilayer', async () => {
+                    const result = await runMagneticTest(replicad, builder, 
+                        'test_wind_three_sections_two_layer_toroidal_contiguous_spread_top_additional_coordinates.json', 
+                        true
+                    );
+                    return result.stlSize > 100;
+                });
+                
+                // test_toroidal_two_layers_not_compact
+                await runTest('test_toroidal_two_layers_not_compact', async () => {
+                    const result = await runMagneticTest(replicad, builder, 'toroidal_two_layers_not_compact.json', true);
+                    return result.stlSize > 100;
+                });
+                
+                // test_toroidal_full_layer_rectangular_wires
+                await runTest('test_toroidal_full_layer_rectangular_wires', async () => {
+                    const result = await runMagneticTest(replicad, builder, 'toroidal_full_layer_rectangular_wires.json');
+                    return result.stlSize > 100;
+                });
+                
+                // test_toroidal_one_turn_rectangular_wire
+                await runTest('test_toroidal_one_turn_rectangular_wire', async () => {
+                    const result = await runMagneticTest(replicad, builder, 'toroidal_one_turn_rectangular_wire.json');
+                    return result.stlSize > 100;
+                });
+
+                // =============================================================
+                // Concentric Tests - mirrors Python TestConcentric class
+                // =============================================================
+                
+                log('\n========================================');
+                log('Concentric Tests');
+                log('========================================');
+                
+                // test_concentric_rectangular_column_one_turn
+                await runTest('test_concentric_rectangular_column_one_turn', async () => {
+                    const result = await runMagneticTest(replicad, builder, 'concentric_rectangular_column_one_turn.json');
+                    return result.stlSize > 100;
+                });
+                
+                // test_concentric_rectangular_column_two_turns
+                await runTest('test_concentric_rectangular_column_two_turns', async () => {
+                    const result = await runMagneticTest(replicad, builder, 'concentric_rectangular_column_two_turns.json');
+                    return result.stlSize > 100;
+                });
+                
+                // test_concentric_rectangular_column_full_layer
+                await runTest('test_concentric_rectangular_column_full_layer', async () => {
+                    const result = await runMagneticTest(replicad, builder, 'concentric_rectangular_column_full_layer.json');
+                    return result.stlSize > 100;
+                });
+                
+                // test_concentric_rectangular_column_two_layers
+                await runTest('test_concentric_rectangular_column_two_layers', async () => {
+                    const result = await runMagneticTest(replicad, builder, 'concentric_rectangular_column_two_layers.json');
+                    return result.stlSize > 100;
+                });
+                
+                // test_concentric_rectangular_column_two_layers_with_bobbin
+                await runTest('test_concentric_rectangular_column_two_layers_with_bobbin', async () => {
+                    const result = await runMagneticTest(replicad, builder, 'concentric_rectangular_column_two_layers_with_bobbin.json');
+                    return result.stlSize > 100;
+                });
+                
+                // test_concentric_round_column_four_layers
+                await runTest('test_concentric_round_column_four_layers', async () => {
+                    const result = await runMagneticTest(replicad, builder, 'concentric_round_column_four_layers.json');
+                    return result.stlSize > 100;
+                });
+                
+                // test_concentric_round_column_one_rectangular_turn
+                await runTest('test_concentric_round_column_one_rectangular_turn', async () => {
+                    const result = await runMagneticTest(replicad, builder, 'concentric_round_column_one_rectangular_turn.json');
+                    return result.stlSize > 100;
+                });
+                
+                // test_concentric_round_column_two_layers_rectangular_turns
+                await runTest('test_concentric_round_column_two_layers_rectangular_turns', async () => {
+                    const result = await runMagneticTest(replicad, builder, 'concentric_round_column_two_layers_rectangular_turns.json');
+                    return result.stlSize > 100;
+                });
+
+                // =============================================================
+                // Summary
+                // =============================================================
+                log('\n========================================');
+                log('Test Summary');
+                log('========================================');
+                log(`Total: ${totalTests}, Passed: ${passedTests}, Failed: ${failedTests}`);
+                
+                if (failedTests === 0) {
+                    log('✓ All tests PASSED!', true);
+                    window.allTestsPassed = true;
+                } else {
+                    log(`✗ ${failedTests} test(s) FAILED`, false);
+                    window.allTestsPassed = false;
+                }
+                window.testsDone = true;
+                window.testResults = testResults;
+                
+            } catch (err) {
+                log(`\n✗ Fatal error: ${err.message}`, false);
+                log(err.stack, false);
+                window.testsDone = true;
+                window.allTestsPassed = false;
+            }
+        }
+        
+        async function runTest(name, testFn) {
+            totalTests++;
+            log(`\n${name}`);
+            try {
+                const result = await testFn();
+                if (result) {
+                    log(`  ✓ PASSED`, true);
+                    passedTests++;
+                    testResults.push({ name, passed: true });
+                } else {
+                    log(`  ✗ FAILED (assertion)`, false);
+                    failedTests++;
+                    testResults.push({ name, passed: false, error: 'Assertion failed' });
+                }
+            } catch (err) {
+                log(`  ✗ FAILED: ${err.message}`, false);
+                log(`    Stack: ${err.stack.split('\n').slice(0, 5).join('\n    ')}`, false);
+                failedTests++;
+                testResults.push({ name, passed: false, error: err.message });
+            }
+        }
+        
+        // Start tests
+        runTests();
+    </script>
+</body>
+</html>

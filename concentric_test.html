@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Concentric Turn Test</title>
+    <style>
+        body { font-family: monospace; white-space: pre; padding: 20px; }
+        .pass { color: green; }
+        .fail { color: red; }
+    </style>
+</head>
+<body>
+    <div id="log"></div>
+    
+    <script type="module">
+        const stlOptions = { tolerance: 0.001, angularTolerance: 0.1, binary: true };
+        
+        function log(msg, isPass = null) {
+            const logEl = document.getElementById('log');
+            let className = isPass === true ? 'pass' : isPass === false ? 'fail' : '';
+            logEl.innerHTML += `<span class="${className}">${msg}</span>\n`;
+            console.log(msg);
+        }
+        
+        function downloadBlob(filename, blob) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            if (!window.stlFiles) window.stlFiles = [];
+            window.stlFiles.push({ filename, blob });
+        }
+
+        async function runTest() {
+            log('Starting...');
+            
+            try {
+                const replicad = await import('/node_modules/replicad/dist/replicad.js');
+                const opencascade = await import('/node_modules/replicad-opencascadejs/src/replicad_single.js');
+                
+                const oc = await opencascade.default({
+                    locateFile: (file) => `/node_modules/replicad-opencascadejs/src/${file}`
+                });
+                replicad.setOC(oc);
+                log('OpenCASCADE loaded', true);
+                
+                const { ReplicadBuilder } = await import('/src/index.js');
+                log('Builder loaded', true);
+
+                // Load test data
+                log('Loading test data...');
+                const response = await fetch('/testData/concentric_rectangular_column_one_turn.json');
+                const masData = await response.json();
+                log('Test data loaded', true);
+                
+                // Build magnetic
+                log('Building magnetic...');
+                const builder = new ReplicadBuilder(replicad);
+                const magnetic = masData.magnetic || masData;
+                const shape = builder.getMagnetic(magnetic, 'concentric_test');
+                log('Shape built', true);
+                
+                // Export STL
+                log('Generating STL...');
+                const stl = shape.blobSTL(stlOptions);
+                log(`STL size: ${stl.size} bytes`, true);
+                downloadBlob('concentric_test.stl', stl);
+                
+                log('✓ Test complete!', true);
+                window.testsDone = true;
+                
+            } catch (err) {
+                log(`Error: ${err.message}`, false);
+                log(err.stack, false);
+                window.testsDone = true;
+            }
+        }
+        
+        runTest();
+    </script>
+</body>
+</html>

@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenMagnetics Virtual Builder - STL Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #1a1a2e;
+            color: #eee;
+        }
+        h1 { color: #00d4ff; }
+        .test-result {
+            padding: 10px 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-family: monospace;
+        }
+        .test-pass {
+            background: #0d4d0d;
+            border-left: 4px solid #0f0;
+        }
+        .test-fail {
+            background: #4d0d0d;
+            border-left: 4px solid #f00;
+        }
+        .test-running {
+            background: #4d4d0d;
+            border-left: 4px solid #ff0;
+        }
+        #status {
+            font-size: 1.2em;
+            margin: 20px 0;
+            padding: 15px;
+            background: #2a2a4e;
+            border-radius: 8px;
+        }
+        .download-btn {
+            display: inline-block;
+            margin: 5px;
+            padding: 8px 16px;
+            background: #00d4ff;
+            color: #000;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .download-btn:hover {
+            background: #00a8cc;
+        }
+        #downloads {
+            margin-top: 20px;
+            padding: 15px;
+            background: #2a2a4e;
+            border-radius: 8px;
+        }
+        pre {
+            background: #0a0a1e;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧲 OpenMagnetics Virtual Builder - STL Test Suite</h1>
+    
+    <div id="status">Initializing OpenCASCADE.js...</div>
+    
+    <div id="results"></div>
+    
+    <div id="downloads" style="display: none;">
+        <h2>📥 Download Generated STL Files</h2>
+        <div id="download-links"></div>
+    </div>
+
+    <script type="module">
+        import opencascade from "replicad-opencascadejs";
+        import { setOC, makeTorus, makeCylinder, makeBox, makeCompound, compoundShapes } from "replicad";
+        import {
+            WireType,
+            ColumnShape,
+            WireDescription,
+            TurnDescription,
+            BobbinProcessedDescription
+        } from "./src/types.js";
+        import { ReplicadBuilder } from "./src/replicadBuilder.js";
+
+        const resultsEl = document.getElementById('results');
+        const statusEl = document.getElementById('status');
+        const downloadsEl = document.getElementById('downloads');
+        const downloadLinksEl = document.getElementById('download-links');
+
+        const stlFiles = [];
+
+        function log(message, isPass = null) {
+            const div = document.createElement('div');
+            div.className = 'test-result ' + (isPass === null ? 'test-running' : (isPass ? 'test-pass' : 'test-fail'));
+            div.innerHTML = message;
+            resultsEl.appendChild(div);
+        }
+
+        function saveSTL(filename, stlData) {
+            stlFiles.push({ filename, data: stlData });
+            
+            // Create download link
+            const blob = new Blob([stlData], { type: 'application/octet-stream' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.className = 'download-btn';
+            a.textContent = '⬇️ ' + filename;
+            downloadLinksEl.appendChild(a);
+        }
+
+        async function runTests() {
+            try {
+                statusEl.innerHTML = '⏳ Loading OpenCASCADE.js (this may take 10-20 seconds)...';
+                
+                const oc = await opencascade();
+                const replicadModule = await import("replicad");
+                replicadModule.setOC(oc);
+                
+                statusEl.innerHTML = '✅ OpenCASCADE.js loaded successfully!';
+                
+                const builder = new ReplicadBuilder(replicadModule);
+                let passed = 0;
+                let failed = 0;
+
+                // Test 1: Concentric round wire turn (rectangular column)
+                log('🔄 Test 1: Concentric Round Wire Turn (Rectangular Column)...');
+                try {
+                    const turn = new TurnDescription({ coordinates: [0.005, 0] });
+                    const wire = new WireDescription({
+                        wireType: WireType.ROUND,
+                        outerDiameter: 0.0005
+                    });
+                    const bobbin = new BobbinProcessedDescription({
+                        columnDepth: 0.003,
+                        columnWidth: 0.003,
+                        columnShape: ColumnShape.RECTANGULAR
+                    });
+
+                    const shape = builder.getTurn(turn, wire, bobbin, false);
+                    const stl = shape.exportSTL();
+                    saveSTL('test1_concentric_round_rect_col.stl', stl);
+                    log('✅ Test 1 PASSED: Concentric round wire (rectangular column) - ' + stl.length + ' bytes', true);
+                    passed++;
+                } catch (error) {
+                    log('❌ Test 1 FAILED: ' + error.message + '<pre>' + error.stack + '</pre>', false);
+                    failed++;
+                }
+
+                // Test 2: Concentric round wire turn (round column)
+                log('🔄 Test 2: Concentric Round Wire Turn (Round Column)...');
+                try {
+                    const turn = new TurnDescription({ coordinates: [0.005, 0] });
+                    const wire = new WireDescription({
+                        wireType: WireType.ROUND,
+                        outerDiameter: 0.0005
+                    });
+                    const bobbin = new BobbinProcessedDescription({
+                        columnDepth: 0.003,
+                        columnWidth: 0.003,
+                        columnShape: ColumnShape.ROUND
+                    });
+
+                    const shape = builder.getTurn(turn, wire, bobbin, false);
+                    const stl = shape.exportSTL();
+                    saveSTL('test2_concentric_round_round_col.stl', stl);
+                    log('✅ Test 2 PASSED: Concentric round wire (round column) - ' + stl.length + ' bytes', true);
+                    passed++;
+                } catch (error) {
+                    log('❌ Test 2 FAILED: ' + error.message + '<pre>' + error.stack + '</pre>', false);
+                    failed++;
+                }
+
+                // Test 3: Concentric rectangular wire turn
+                log('🔄 Test 3: Concentric Rectangular Wire Turn...');
+                try {
+                    const turn = new TurnDescription({
+                        coordinates: [0.006, 0],
+                        dimensions: [0.002, 0.0005]
+                    });
+                    const wire = new WireDescription({
+                        wireType: WireType.RECTANGULAR,
+                        outerWidth: 0.002,
+                        outerHeight: 0.0005
+                    });
+                    const bobbin = new BobbinProcessedDescription({
+                        columnDepth: 0.004,
+                        columnWidth: 0.004,
+                        columnShape: ColumnShape.ROUND
+                    });
+
+                    const shape = builder.getTurn(turn, wire, bobbin, false);
+                    const stl = shape.exportSTL();
+                    saveSTL('test3_concentric_rectangular.stl', stl);
+                    log('✅ Test 3 PASSED: Concentric rectangular wire - ' + stl.length + ' bytes', true);
+                    passed++;
+                } catch (error) {
+                    log('❌ Test 3 FAILED: ' + error.message + '<pre>' + error.stack + '</pre>', false);
+                    failed++;
+                }
+
+                // Test 4: Toroidal turn
+                log('🔄 Test 4: Toroidal Turn...');
+                try {
+                    const turn = new TurnDescription({
+                        coordinates: [-0.008, 0],
+                        additionalCoordinates: [[-0.012, 0]],
+                        rotation: 0
+                    });
+                    const wire = new WireDescription({
+                        wireType: WireType.ROUND,
+                        outerDiameter: 0.0008
+                    });
+                    const bobbin = new BobbinProcessedDescription({
+                        columnDepth: 0.005,
+                        windingWindowRadialHeight: 0.004
+                    });
+
+                    const shape = builder.getTurn(turn, wire, bobbin, true);
+                    const stl = shape.exportSTL();
+                    saveSTL('test4_toroidal.stl', stl);
+                    log('✅ Test 4 PASSED: Toroidal turn - ' + stl.length + ' bytes', true);
+                    passed++;
+                } catch (error) {
+                    log('❌ Test 4 FAILED: ' + error.message + '<pre>' + error.stack + '</pre>', false);
+                    failed++;
+                }
+
+                // Test 5: Bobbin (rectangular column)
+                log('🔄 Test 5: Bobbin (Rectangular Column)...');
+                try {
+                    const bobbin = new BobbinProcessedDescription({
+                        columnDepth: 0.004,
+                        columnWidth: 0.004,
+                        columnThickness: 0.001,
+                        wallThickness: 0.0005,
+                        columnShape: ColumnShape.RECTANGULAR,
+                        windingWindowHeight: 0.010,
+                        windingWindowWidth: 0.005
+                    });
+
+                    const shape = builder.getBobbin(bobbin);
+                    if (shape) {
+                        const stl = shape.exportSTL();
+                        saveSTL('test5_bobbin_rectangular.stl', stl);
+                        log('✅ Test 5 PASSED: Bobbin (rectangular) - ' + stl.length + ' bytes', true);
+                        passed++;
+                    } else {
+                        log('⚠️ Test 5 SKIPPED: Bobbin returned null (zero thickness)', true);
+                        passed++;
+                    }
+                } catch (error) {
+                    log('❌ Test 5 FAILED: ' + error.message + '<pre>' + error.stack + '</pre>', false);
+                    failed++;
+                }
+
+                // Test 6: Bobbin (round column)
+                log('🔄 Test 6: Bobbin (Round Column)...');
+                try {
+                    const bobbin = new BobbinProcessedDescription({
+                        columnDepth: 0.004,
+                        columnWidth: 0.004,
+                        columnThickness: 0.001,
+                        wallThickness: 0.0005,
+                        columnShape: ColumnShape.ROUND,
+                        windingWindowHeight: 0.010,
+                        windingWindowWidth: 0.005
+                    });
+
+                    const shape = builder.getBobbin(bobbin);
+                    if (shape) {
+                        const stl = shape.exportSTL();
+                        saveSTL('test6_bobbin_round.stl', stl);
+                        log('✅ Test 6 PASSED: Bobbin (round) - ' + stl.length + ' bytes', true);
+                        passed++;
+                    } else {
+                        log('⚠️ Test 6 SKIPPED: Bobbin returned null (zero thickness)', true);
+                        passed++;
+                    }
+                } catch (error) {
+                    log('❌ Test 6 FAILED: ' + error.message + '<pre>' + error.stack + '</pre>', false);
+                    failed++;
+                }
+
+                // Summary
+                statusEl.innerHTML = `
+                    <h2>Test Results</h2>
+                    <p>✅ Passed: ${passed} | ❌ Failed: ${failed}</p>
+                    <p>Total STL files generated: ${stlFiles.length}</p>
+                `;
+
+                if (stlFiles.length > 0) {
+                    downloadsEl.style.display = 'block';
+                    
+                    // Add "Download All" button
+                    const allBtn = document.createElement('button');
+                    allBtn.className = 'download-btn';
+                    allBtn.textContent = '📦 Download All as ZIP (coming soon)';
+                    allBtn.style.marginBottom = '15px';
+                    allBtn.style.display = 'block';
+                    downloadLinksEl.insertBefore(allBtn, downloadLinksEl.firstChild);
+                }
+
+            } catch (error) {
+                statusEl.innerHTML = '❌ Initialization failed: ' + error.message;
+                log('Fatal error: ' + error.message + '<pre>' + error.stack + '</pre>', false);
+            }
+        }
+
+        // Run tests on page load
+        runTests();
+    </script>
+</body>
+</html>

@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Quarter Torus Debug Test</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #1a1a1a; color: #f0f0f0; }
+        pre { white-space: pre-wrap; margin: 0; line-height: 1.4; }
+        #output { padding: 10px; background: #2a2a2a; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <h1>Quarter Torus Debug Test</h1>
+    <div id="output"><pre id="log">Initializing...</pre></div>
+    
+    <script type="module">
+        const stlOptions = { tolerance: 0.001, angularTolerance: 0.1, binary: true };
+        
+        function log(msg) {
+            const logEl = document.getElementById('log');
+            logEl.innerHTML += msg + '\n';
+            console.log(msg);
+        }
+        
+        async function downloadBlob(filename, blob) {
+            if (!window.stlFiles) window.stlFiles = [];
+            window.stlFiles.push({ filename, blob });
+            
+            if (window.saveFile) {
+                try {
+                    const reader = new FileReader();
+                    const base64 = await new Promise((resolve) => {
+                        reader.onload = () => resolve(reader.result.split(',')[1]);
+                        reader.readAsDataURL(blob);
+                    });
+                    await window.saveFile(filename, base64);
+                } catch (e) {
+                    console.error('Failed to save:', filename, e);
+                }
+            }
+        }
+        
+        async function runTests() {
+            log('Initializing OpenCASCADE.js...');
+            
+            try {
+                const replicad = await import('/node_modules/replicad/dist/replicad.js');
+                const opencascade = await import('/node_modules/replicad-opencascadejs/src/replicad_single.js');
+                
+                const oc = await opencascade.default({
+                    locateFile: (file) => `/node_modules/replicad-opencascadejs/src/${file}`
+                });
+                replicad.setOC(oc);
+                log('✓ OpenCASCADE.js loaded!');
+                
+                // Check if getOC is available
+                const getOC = replicad.getOC;
+                if (getOC) {
+                    log('✓ getOC is available!');
+                    const ocRef = getOC();
+                    log('  OC object available: ' + (ocRef ? 'YES' : 'NO'));
+                } else {
+                    log('✗ getOC is NOT available');
+                }
+                
+                const { drawCircle, makeCylinder, makeCompound } = replicad;
+                
+                // Test parameters - simple case
+                const majorRadius = 5;  // bend radius
+                const minorRadius = 1;  // wire radius
+                
+                log('\n=== Test 1: Full Torus (reference) ===');
+                // Create full torus - circle at (majorRadius, 0, 0) revolved around Z
+                const fullTorusCircle = drawCircle(minorRadius).sketchOnPlane("YZ", majorRadius);
+                const fullTorus = fullTorusCircle.revolve([0, 0, 1], { origin: [0, 0, 0] });
+                const stl1 = fullTorus.blobSTL(stlOptions);
+                await downloadBlob('debug_full_torus.stl', stl1);
+                log(`Full torus STL: ${stl1.size} bytes`);
+                
+                log('\n=== Test 2: Quarter Torus using replicad revolve ===');
+                // Quarter torus - circle at (majorRadius, 0, 0), revolve 90° around Z
+                const qCircleYZ = drawCircle(minorRadius).sketchOnPlane("YZ", majorRadius);
+                const quarterYZ = qCircleYZ.revolve([0, 0, 1], { origin: [0, 0, 0], angle: 90 });
+                const stl2 = quarterYZ.blobSTL(stlOptions);
+                await downloadBlob('debug_quarter_torus_replicad.stl', stl2);
+                log(`Quarter torus (replicad): ${stl2.size} bytes - SAME as full? ${stl2.size === stl1.size ? 'YES (broken)' : 'NO'}`);
+                
+                log('\n=== Test 3: Quarter Torus using BRepPrimAPI_MakeTorus ===');
+                try {
+                    const oc = getOC();
+                    
+                    // Create axis at origin, direction Z, X-reference at +X
+                    const center = new oc.gp_Pnt_3(0, 0, 0);
+                    const zDir = new oc.gp_Dir_4(0, 0, 1);
+                    const xDir = new oc.gp_Dir_4(1, 0, 0);
+                    const ax2 = new oc.gp_Ax2_2(center, zDir, xDir);
+                    
+                    // _6 takes: ax2, majorR, minorR, angle
+                    const torusMaker = new oc.BRepPrimAPI_MakeTorus_6(ax2, majorRadius, minorRadius, Math.PI / 2);
+                    const torusShape = torusMaker.Shape();
+                    log('BRepPrimAPI_MakeTorus_6 succeeded!');
+                    
+                    // Create a replicad Solid from the OC shape
+                    const { Solid } = replicad;
+                    const quarterTorus = new Solid(torusShape);
+                    
+                    const stl3 = quarterTorus.blobSTL(stlOptions);
+                    await downloadBlob('debug_quarter_torus_direct.stl', stl3);
+                    log(`Quarter torus (BRepPrimAPI): ${stl3.size} bytes - different from full? ${stl3.size !== stl1.size ? 'YES (working!)' : 'NO'}`);
+                } catch (e) {
+                    log(`ERROR in BRepPrimAPI test: ${e.message}`);
+                    console.error(e);
+                }
+                
+                log('\n=== Test 4: Tube + Quarter Corner (full assembly) ===');
+                // Create a tube going +Y, then a quarter corner to -X
+                const tubeLength = 10;
+                const tube = makeCylinder(minorRadius, tubeLength)
+                    .rotate(-90, [0, 0, 0], [1, 0, 0]); // Point in +Y
+                
+                // Corner at (0, tubeLength, 0) - should turn from +Y to -X
+                // Center at (-majorRadius, tubeLength, 0)
+                const cornerCircle = drawCircle(minorRadius).sketchOnPlane("YZ", majorRadius);
+                const corner = cornerCircle.revolve([0, 0, 1], { origin: [0, 0, 0], angle: 90 })
+                    .translate([-majorRadius, tubeLength, 0]);
+                
+                const assembly = makeCompound([tube, corner]);
+                const stl4 = assembly.blobSTL(stlOptions);
+                await downloadBlob('debug_tube_with_corner.stl', stl4);
+                log(`Tube + Corner STL: ${stl4.size} bytes`);
+                
+                log('\n=== Test 5: Full turn geometry (tubes + corners) ===');
+                // Recreate a simplified toroidal turn
+                const innerX = -10;  // inner wire at X=-10
+                const outerX = -20;  // outer wire at X=-20
+                const bendR = majorRadius;
+                const wireR = minorRadius;
+                const tubeH = 15;
+                
+                const parts = [];
+                
+                // Inner tube (at innerX, going +Y)
+                const innerTube = makeCylinder(wireR, tubeH)
+                    .rotate(-90, [0, 0, 0], [1, 0, 0])
+                    .translate([innerX, 0, 0]);
+                parts.push(innerTube);
+                
+                // Inner corner (at innerX - bendR, tubeH)
+                // Should connect inner tube at (innerX, tubeH) to radial at (innerX - bendR, tubeH + bendR)
+                const innerCorner = drawCircle(wireR)
+                    .sketchOnPlane("YZ", bendR)
+                    .revolve([0, 0, 1], { origin: [0, 0, 0], angle: 90 })
+                    .translate([innerX - bendR, tubeH, 0]);
+                parts.push(innerCorner);
+                
+                // Radial segment (from innerX to outerX, at Y=tubeH+bendR)
+                const radialLength = Math.abs(outerX - innerX) - 2 * bendR;
+                const radialTube = makeCylinder(wireR, radialLength)
+                    .rotate(-90, [0, 0, 0], [0, 1, 0])  // Point in -X
+                    .translate([innerX - bendR, tubeH + bendR, 0]);
+                parts.push(radialTube);
+                
+                // Outer corner (at outerX + bendR, tubeH)
+                // This should connect radial to outer tube
+                // Needs to be rotated 90° - starts at +Y, ends at +X (relative to its center)
+                const outerCorner = drawCircle(wireR)
+                    .sketchOnPlane("YZ", bendR)
+                    .revolve([0, 0, 1], { origin: [0, 0, 0], angle: 90 })
+                    .rotate(90, [0, 0, 0], [0, 0, 1])  // Rotate 90° so it starts at +Y
+                    .translate([outerX + bendR, tubeH, 0]);
+                parts.push(outerCorner);
+                
+                // Outer tube (at outerX, going +Y)
+                const outerTube = makeCylinder(wireR, tubeH)
+                    .rotate(-90, [0, 0, 0], [1, 0, 0])
+                    .translate([outerX, 0, 0]);
+                parts.push(outerTube);
+                
+                const fullTurn = makeCompound(parts);
+                const stl5 = fullTurn.blobSTL(stlOptions);
+                await downloadBlob('debug_full_turn.stl', stl5);
+                log(`Full turn STL: ${stl5.size} bytes`);
+                
+                log('\n=== Tests Complete ===');
+                window.testsComplete = true;
+                
+            } catch (e) {
+                log('ERROR: ' + e.message);
+                console.error(e);
+                window.testsComplete = true;
+                window.testError = e.message;
+            }
+        }
+        
+        runTests();
+    </script>
+</body>
+</html>

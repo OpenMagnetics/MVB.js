@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Simple Scale Test</title>
+</head>
+<body>
+    <pre id="log">Starting...</pre>
+    <script type="module">
+        const stlOptions = { tolerance: 0.001, angularTolerance: 0.1, binary: true };
+        
+        function log(msg) {
+            document.getElementById('log').textContent += '\n' + msg;
+            console.log(msg);
+        }
+        
+        async function runTest() {
+            try {
+                const replicad = await import('/node_modules/replicad/dist/replicad.js');
+                const opencascade = await import('/node_modules/replicad-opencascadejs/src/replicad_single.js');
+                
+                const oc = await opencascade.default({
+                    locateFile: (file) => `/node_modules/replicad-opencascadejs/src/${file}`
+                });
+                replicad.setOC(oc);
+                log('OpenCASCADE loaded');
+                
+                const { ReplicadBuilder } = await import('/src/index.js');
+                log('Builder loaded');
+                
+                const builder = new ReplicadBuilder(replicad);
+                
+                // Load simple test data
+                const response = await fetch('/testData/concentric_rectangular_column_one_turn.json');
+                const masData = await response.json();
+                
+                log('Building geometry...');
+                const shape = builder.getMagnetic(masData.magnetic, 'test');
+                log('Shape built');
+                
+                // Geometry is now returned in mm (no scaling needed)
+                log('Generating STL...');
+                const stl = shape.blobSTL(stlOptions);
+                log('STL size: ' + stl.size + ' bytes');
+                
+                // Store for puppeteer to collect
+                window.stlFiles = [{ filename: 'scale_test.stl', blob: stl }];
+                window.testsDone = true;
+                window.allTestsPassed = true;
+                log('✓ Test complete!');
+                
+            } catch (err) {
+                log('Error: ' + err.message);
+                log(err.stack);
+                window.testsDone = true;
+                window.allTestsPassed = false;
+            }
+        }
+        
+        runTest();
+    </script>
+</body>
+</html>
