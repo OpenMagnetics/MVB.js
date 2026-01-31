@@ -15,6 +15,8 @@ import {
   convertAxis
 } from './types.js';
 
+import { getCore, getSupportedFamilies } from './coreShapes.js';
+
 // ==========================================================================
 // Global Configuration
 // ==========================================================================
@@ -333,13 +335,19 @@ export class ReplicadBuilder {
       }
     };
 
-    // 1. Inner tube (along Y)
+    // For multilayer turns, the angle difference between inner and outer wires
+    // requires rotating the connecting pieces to align properly.
+    // The radial segment spans from inner to outer, and the inner corner/tube 
+    // on the "top" side need to be tilted to connect with the tilted radial segment.
+    
+    // 1. Inner tube (along Y) - stays at inner position, no angle rotation needed
     let innerTube = createTube(tubeLength)
       .rotate(-90, [0, 0, 0], [1, 0, 0])
       .translate([innerX, 0, 0]);
     pieces.push(innerTube);
 
-    // 2. Inner corner
+    // 2. Inner corner - needs to connect inner tube to the tilted radial segment
+    //    The corner itself needs to be tilted by angleDiffDeg/2 to smoothly connect
     let innerCorner = this._makeQuarterTorus(
       bendRadius,
       wireRadius,
@@ -347,18 +355,27 @@ export class ReplicadBuilder {
       0,
       [0, 0, 1]
     );
+    // Rotate inner corner by half the angle difference to blend the transition
+    if (Math.abs(angleDiffDeg) > 0.001) {
+      innerCorner = innerCorner.rotate(angleDiffDeg / 2, [innerX, 0, 0], [0, 1, 0]);
+    }
     pieces.push(innerCorner);
 
-    // 3. Radial segment
+    // 3. Radial segment - tilted by angleDiffDeg to go from inner to outer angle
     let radialTube = createTube(radialLength, true)
       .rotate(-90, [0, 0, 0], [0, 1, 0]);
+    // First rotate by half angle (to match inner corner end), then position
     if (Math.abs(angleDiffDeg) > 0.001) {
-      radialTube = radialTube.rotate(angleDiffDeg, [0, 0, 0], [0, 1, 0]);
+      radialTube = radialTube.rotate(angleDiffDeg / 2, [0, 0, 0], [0, 1, 0]);
     }
     radialTube = radialTube.translate([innerX - bendRadius, radialHeight, 0]);
+    // Now rotate around the inner position to reach outer angle
+    if (Math.abs(angleDiffDeg) > 0.001) {
+      radialTube = radialTube.rotate(angleDiffDeg / 2, [innerX, 0, 0], [0, 1, 0]);
+    }
     pieces.push(radialTube);
 
-    // 4. Outer corner
+    // 4. Outer corner - at the outer position, rotated by full angleDiffDeg
     let outerCorner = this._makeQuarterTorus(
       bendRadius,
       wireRadius,
@@ -367,16 +384,16 @@ export class ReplicadBuilder {
       [0, 0, 1]
     );
     if (Math.abs(angleDiffDeg) > 0.001) {
-      outerCorner = outerCorner.rotate(angleDiffDeg, [0, 0, 0], [0, 1, 0]);
+      outerCorner = outerCorner.rotate(angleDiffDeg, [innerX, 0, 0], [0, 1, 0]);
     }
     pieces.push(outerCorner);
 
-    // 5. Outer tube
+    // 5. Outer tube - at the outer position, rotated by full angleDiffDeg
     let outerTube = createTube(tubeLength)
       .rotate(-90, [0, 0, 0], [1, 0, 0])
       .translate([innerX - radialDistance, 0, 0]);
     if (Math.abs(angleDiffDeg) > 0.001) {
-      outerTube = outerTube.rotate(angleDiffDeg, [0, 0, 0], [0, 1, 0]);
+      outerTube = outerTube.rotate(angleDiffDeg, [innerX, 0, 0], [0, 1, 0]);
     }
     pieces.push(outerTube);
 
@@ -494,7 +511,18 @@ export class ReplicadBuilder {
       if (geometricalPart.shape?.family?.toLowerCase() === 't') {
         isToroidal = true;
       }
-      // Note: Full core shape building would require porting all IPiece subclasses
+    }
+
+    // Build core geometry using getCore from coreShapes.js
+    if (geometricalDescription.length > 0) {
+      try {
+        const coreShape = getCore(this.r, geometricalDescription);
+        if (coreShape) {
+          allPieces.push(coreShape);
+        }
+      } catch (err) {
+        console.warn('Could not build core:', err.message);
+      }
     }
 
     // Build coil turns

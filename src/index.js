@@ -27,5 +27,16 @@ export {
   exportToMesh
 } from './replicadBuilder.js';
 
+// Re-export core shape utilities
+export {
+  ShapePiece,
+  TShape,
+  EShape,
+  CShape,
+  getShapeBuilder,
+  getCore,
+  getSupportedFamilies
+} from './coreShapes.js';
+
 // Default export for convenience
 export { ReplicadBuilder as default } from './replicadBuilder.js';

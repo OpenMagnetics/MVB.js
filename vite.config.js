@@ -29,7 +29,7 @@ export default defineConfig({
   },
   server: {
     port: 3000,
-    open: true,
+    open: false,
     fs: {
       // Allow serving files from node_modules and parent directories for test data
       allow: ['..', '../..', '../../..', '../../../..']
@@ -38,8 +38,8 @@ export default defineConfig({
   plugins: [{
     name: 'serve-test-data',
     configureServer(server) {
-      // Serve testData from MVB/tests/testData/
-      const testDataPath = path.resolve(__dirname, '../../../tests/testData');
+      // Serve testData from local tests/testData/
+      const testDataPath = path.resolve(__dirname, 'tests/testData');
       server.middlewares.use('/testData', (req, res, next) => {
         const filePath = path.join(testDataPath, req.url);
         fs.readFile(filePath, (err, data) => {

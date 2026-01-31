@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Core Shapes Test</title>
+  <style>
+    body { font-family: monospace; padding: 20px; background: #1e1e1e; color: #d4d4d4; }
+    #log { white-space: pre-wrap; line-height: 1.5; }
+    .pass { color: #4ec9b0; }
+    .fail { color: #f14c4c; }
+    .info { color: #569cd6; }
+    a { color: #569cd6; display: block; margin: 5px 0; }
+  </style>
+</head>
+<body>
+  <h1>Core Shapes Test</h1>
+  <div id="log"></div>
+  <div id="downloads"></div>
+
+<script type="module">
+import opencascade from 'replicad-opencascadejs/src/replicad_single.js';
+import opencascadeWasm from 'replicad-opencascadejs/src/replicad_single.wasm?url';
+import { setOC } from 'replicad';
+import * as replicadModule from 'replicad';
+import { ReplicadBuilder, exportToSTL, exportToMesh } from './src/replicadBuilder.js';
+import { getShapeBuilder, getCore, getSupportedFamilies } from './src/coreShapes.js';
+import { flattenDimensions } from './src/types.js';
+
+// Scale factor for export (meters to mm)
+const SCALE = 1000;
+
+const logDiv = document.getElementById('log');
+const downloadsDiv = document.getElementById('downloads');
+window.stlFiles = [];
+
+function log(msg, className = '') {
+  const span = document.createElement('span');
+  span.className = className;
+  span.textContent = msg + '\n';
+  logDiv.appendChild(span);
+  console.log(msg);
+}
+
+function addDownload(filename, blob) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.textContent = `Download ${filename}`;
+  downloadsDiv.appendChild(a);
+  window.stlFiles.push({ filename, blob });
+}
+
+// Test shape data for each family
+const testShapes = {
+  t: {
+    name: "T 22/14/13",
+    family: "t",
+    familySubtype: "1",
+    dimensions: { A: 0.0220, B: 0.0140, C: 0.0130 }
+  },
+  e: {
+    name: "E 25/13/7",
+    family: "e",
+    familySubtype: "1",
+    // Real E 25/13/7 dimensions from MAS data
+    dimensions: { A: 0.0251, B: 0.0126, C: 0.0072, D: 0.00895, E: 0.0179, F: 0.00725 }
+  },
+  etd: {
+    name: "ETD 29/16/10",
+    family: "etd",
+    familySubtype: "1",
+    dimensions: { A: 0.0290, B: 0.0160, C: 0.0100, D: 0.0100, E: 0.0210, F: 0.0100 }
+  },
+  er: {
+    name: "ER 28/14/11",
+    family: "er",
+    familySubtype: "1",
+    dimensions: { A: 0.0280, B: 0.0140, C: 0.0110, D: 0.0090, E: 0.0220, F: 0.0100, G: 0.0150 }
+  },
+  pq: {
+    name: "PQ 20/16",
+    family: "pq",
+    familySubtype: "1",
+    dimensions: { A: 0.0200, B: 0.0160, C: 0.0100, D: 0.0120, E: 0.0140, F: 0.0080, G: 0.0110 }
+  },
+  rm: {
+    name: "RM 10",
+    family: "rm",
+    familySubtype: "3",
+    dimensions: { A: 0.0270, B: 0.0093, C: 0.0130, D: 0.0065, E: 0.0210, F: 0.0100, G: 0.0100, H: 0.0055, J: 0.0240 }
+  },
+  p: {
+    name: "P 14/8",
+    family: "p",
+    familySubtype: "1",
+    dimensions: { A: 0.0140, B: 0.0080, C: 0.0070, D: 0.0055, E: 0.0110, F: 0.0055, G: 0.0040, H: 0.0030 }
+  },
+  c: {
+    name: "C Test",
+    family: "c",
+    familySubtype: "1",
+    dimensions: { A: 0.0200, B: 0.0120, C: 0.0080, D: 0.0070, E: 0.0100 }
+  },
+  u: {
+    name: "U Test",
+    family: "u",
+    familySubtype: "1",
+    dimensions: { A: 0.0200, B: 0.0120, C: 0.0080, D: 0.0070, E: 0.0100 }
+  },
+  ep: {
+    name: "EP 7",
+    family: "ep",
+    familySubtype: "1",
+    dimensions: { A: 0.0075, B: 0.0046, C: 0.0052, D: 0.0030, E: 0.0057, F: 0.0035, G: 0.0040, K: 0.0010 }
+  },
+  efd: {
+    name: "EFD 15/8/5",
+    family: "efd",
+    familySubtype: "1",
+    dimensions: { A: 0.0150, B: 0.0050, C: 0.0080, D: 0.0035, E: 0.0100, F: 0.0055, F2: 0.0035, K: 0.0010, q: 0.0005 }
+  },
+  ec: {
+    name: "EC 35",
+    family: "ec",
+    familySubtype: "1",
+    dimensions: { A: 0.0350, B: 0.0150, C: 0.0170, D: 0.0095, E: 0.0230, F: 0.0110, T: 0.0080, s: 0.0050 }
+  },
+  eq: {
+    name: "EQ 25",
+    family: "eq",
+    familySubtype: "1",
+    dimensions: { A: 0.0250, B: 0.0070, C: 0.0080, D: 0.0050, E: 0.0180, F: 0.0085, G: 0.0100 }
+  },
+  lp: {
+    name: "LP 22/13",
+    family: "lp",
+    familySubtype: "1",
+    dimensions: { A: 0.0220, B: 0.0050, C: 0.0130, D: 0.0030, E: 0.0160, F: 0.0070, G: 0.0100 }
+  },
+  pm: {
+    name: "PM 50/39",
+    family: "pm",
+    familySubtype: "1",
+    dimensions: { A: 0.0500, B: 0.0100, C: 0.0200, D: 0.0060, E: 0.0350, F: 0.0200, G: 0.0080, H: 0.0050, b: 0.0040, t: 0.0050, alpha: 120 }
+  }
+};
+
+// Test geometrical descriptions (simulating PyMKF output)
+// MKF coordinates: {radial, height, depth}
+// MKF uses:
+//   - Top piece: rotation = [π, π, 0], coordinates = {0, height, depth}
+//   - Bottom piece: rotation = [0, 0, 0], coordinates = {0, -height, depth}
+// For a simple two-piece set with no spacer and single stack:
+//   - height = 0 (no spacer)
+//   - depth = 0 (first stack)
+function createGeometricalDescription(shapeData) {
+  const isToroidal = shapeData.family === 't';
+  
+  if (isToroidal) {
+    return [{
+      type: 'toroidal',
+      shape: shapeData,
+      coordinates: [0, 0, 0],
+      rotation: [0, 0, 0],
+      machining: null
+    }];
+  } else {
+    // Two-piece set: top and bottom halves (matching MKF format)
+    // MKF coordinates are [radial, height, depth]
+    // For no-spacer case, both pieces are at height=0
+    return [
+      {
+        type: 'half set',
+        shape: shapeData,
+        coordinates: [0, 0, 0],  // MKF format: [radial, height, depth]
+        rotation: [Math.PI, Math.PI, 0],  // Top piece rotates 180° around X and Y
+        machining: null
+      },
+      {
+        type: 'half set',
+        shape: shapeData,
+        coordinates: [0, 0, 0],  // Same position, rotation differentiates them
+        rotation: [0, 0, 0],
+        machining: null
+      }
+    ];
+  }
+}
+
+async function runTests() {
+  log('Initializing OpenCASCADE.js...', 'info');
+  log('Loading WASM (takes 10-20 seconds)...', 'info');
+  
+  const oc = await opencascade({
+    locateFile: () => opencascadeWasm
+  });
+  setOC(oc);
+  
+  log('✓ OpenCASCADE.js loaded!', 'pass');
+  
+  // Get supported families
+  const supportedFamilies = getSupportedFamilies();
+  log(`Supported shape families: ${supportedFamilies.join(', ')}`, 'info');
+  
+  let passed = 0;
+  let failed = 0;
+  const results = [];
+
+  log('\n========================================', 'info');
+  log('Shape Piece Tests', 'info');
+  log('========================================\n', 'info');
+
+  // Test each shape piece
+  for (const [family, shapeData] of Object.entries(testShapes)) {
+    const testName = `test_shape_${family}`;
+    log(`\n${testName}`);
+    
+    try {
+      const builder = new ReplicadBuilder(replicadModule);
+      // Pass the replicad module to the shape builder
+      const shapeBuilder = getShapeBuilder(replicadModule, shapeData.family);
+      
+      // Flatten dimensions and prepare data (dimensions are in meters)
+      const data = { ...shapeData };
+      data.dimensions = flattenDimensions(data);
+      
+      // Build the piece (in meters)
+      let piece = shapeBuilder.getPiece(data);
+      
+      // Scale from meters to mm for STL export
+      piece = piece.scale(SCALE);
+      
+      // Generate STL using blobSTL method (as used in test_magnetic.html)
+      const stl = piece.blobSTL({ tolerance: 1.0, angularTolerance: 0.8, binary: true });
+      const blob = stl;
+      
+      log(`    STL size: ${stl.size} bytes`);
+      
+      if (stl.size > 100) {
+        log('  ✓ PASSED', 'pass');
+        passed++;
+        addDownload(`shape_${family}.stl`, blob);
+      } else {
+        log('  ✗ FAILED: STL too small', 'fail');
+        failed++;
+      }
+    } catch (err) {
+      log(`  ✗ FAILED: ${err.message}`, 'fail');
+      console.error(err);
+      failed++;
+    }
+  }
+
+  log('\n========================================', 'info');
+  log('Core Assembly Tests', 'info');
+  log('========================================\n', 'info');
+
+  // Test complete core assembly for a few shapes
+  const coreTestShapes = ['t', 'e', 'etd', 'rm', 'pq'];
+  
+  for (const family of coreTestShapes) {
+    const testName = `test_core_${family}`;
+    log(`\n${testName}`);
+    
+    try {
+      const shapeData = testShapes[family];
+      const geometricalDescription = createGeometricalDescription(shapeData);
+      
+      const builder = new ReplicadBuilder(replicadModule);
+      // Pass the replicad module to getCore
+      const core = getCore(replicadModule, geometricalDescription);
+      
+      if (core) {
+        // Generate STL using blobSTL method
+        const stl = core.blobSTL({ tolerance: 1.0, angularTolerance: 0.8, binary: true });
+        const blob = stl;
+        
+        log(`    STL size: ${stl.size} bytes`);
+        
+        if (stl.size > 100) {
+          log('  ✓ PASSED', 'pass');
+          passed++;
+          addDownload(`core_${family}.stl`, blob);
+        } else {
+          log('  ✗ FAILED: STL too small', 'fail');
+          failed++;
+        }
+      } else {
+        log('  ✗ FAILED: Core is null', 'fail');
+        failed++;
+      }
+    } catch (err) {
+      log(`  ✗ FAILED: ${err.message}`, 'fail');
+      console.error(err);
+      failed++;
+    }
+  }
+
+  log('\n========================================', 'info');
+  log('Gapped Core Tests (Central Gap)', 'info');
+  log('========================================\n', 'info');
+
+  // Test gapping with central column gap (subtractive gapping)
+  // Machining format: { coordinates: [radial, height, depth], length: gapLength }
+  // For central column: radial = 0
+  const centralGapTestShapes = ['e', 'etd', 'pq'];
+  
+  for (const family of centralGapTestShapes) {
+    const testName = `test_gapped_core_central_${family}`;
+    log(`\n${testName}`);
+    
+    try {
+      const shapeData = testShapes[family];
+      const gapLength = 0.001; // 1mm gap
+      
+      // Create geometrical description with central column gap
+      // The gap is centered at height=0 (middle of core)
+      // Coordinates are [radial, height, depth]
+      const geometricalDescription = [
+        {
+          type: 'half set',
+          shape: shapeData,
+          coordinates: [0, 0, 0],
+          rotation: [Math.PI, Math.PI, 0],
+          // Machining for top half: gap at height = gapLength/2 (from the split plane)
+          machining: [{
+            coordinates: [0, gapLength / 2, 0],  // [radial=0 for central, height, depth]
+            length: gapLength / 2  // Half the gap in each piece
+          }]
+        },
+        {
+          type: 'half set',
+          shape: shapeData,
+          coordinates: [0, 0, 0],
+          rotation: [0, 0, 0],
+          // Machining for bottom half: gap at height = -gapLength/2
+          machining: [{
+            coordinates: [0, -gapLength / 2, 0],
+            length: gapLength / 2
+          }]
+        }
+      ];
+      
+      const core = getCore(replicadModule, geometricalDescription);
+      
+      if (core) {
+        const stl = core.blobSTL({ tolerance: 1.0, angularTolerance: 0.8, binary: true });
+        const blob = stl;
+        
+        log(`    STL size: ${stl.size} bytes`);
+        
+        if (stl.size > 100) {
+          log('  ✓ PASSED', 'pass');
+          passed++;
+          addDownload(`gapped_central_${family}.stl`, blob);
+        } else {
+          log('  ✗ FAILED: STL too small', 'fail');
+          failed++;
+        }
+      } else {
+        log('  ✗ FAILED: Core is null', 'fail');
+        failed++;
+      }
+    } catch (err) {
+      log(`  ✗ FAILED: ${err.message}`, 'fail');
+      console.error(err);
+      failed++;
+    }
+  }
+
+  log('\n========================================', 'info');
+  log('Gapped Core Tests (Distributed Gap)', 'info');
+  log('========================================\n', 'info');
+
+  // Test distributed gapping (gaps on lateral columns)
+  // Machining format: { coordinates: [radial, height, depth], length: gapLength }
+  // For lateral columns: radial = ±(distance from center)
+  const distributedGapTestShapes = ['e', 'etd'];
+  
+  for (const family of distributedGapTestShapes) {
+    const testName = `test_gapped_core_distributed_${family}`;
+    log(`\n${testName}`);
+    
+    try {
+      const shapeData = testShapes[family];
+      const dims = flattenDimensions(shapeData);
+      const gapLength = 0.0005; // 0.5mm gap per column
+      
+      // Distance to lateral columns (approximately E/2 or half of winding window width)
+      const lateralDistance = dims.E / 2;
+      
+      // Create geometrical description with distributed gaps
+      const geometricalDescription = [
+        {
+          type: 'half set',
+          shape: shapeData,
+          coordinates: [0, 0, 0],
+          rotation: [Math.PI, Math.PI, 0],
+          // Machining for top half: gaps on both lateral columns
+          machining: [
+            {
+              coordinates: [lateralDistance, gapLength / 2, 0],  // Right lateral column
+              length: gapLength / 2
+            },
+            {
+              coordinates: [-lateralDistance, gapLength / 2, 0],  // Left lateral column
+              length: gapLength / 2
+            }
+          ]
+        },
+        {
+          type: 'half set',
+          shape: shapeData,
+          coordinates: [0, 0, 0],
+          rotation: [0, 0, 0],
+          // Machining for bottom half
+          machining: [
+            {
+              coordinates: [lateralDistance, -gapLength / 2, 0],
+              length: gapLength / 2
+            },
+            {
+              coordinates: [-lateralDistance, -gapLength / 2, 0],
+              length: gapLength / 2
+            }
+          ]
+        }
+      ];
+      
+      const core = getCore(replicadModule, geometricalDescription);
+      
+      if (core) {
+        const stl = core.blobSTL({ tolerance: 1.0, angularTolerance: 0.8, binary: true });
+        const blob = stl;
+        
+        log(`    STL size: ${stl.size} bytes`);
+        
+        if (stl.size > 100) {
+          log('  ✓ PASSED', 'pass');
+          passed++;
+          addDownload(`gapped_distributed_${family}.stl`, blob);
+        } else {
+          log('  ✗ FAILED: STL too small', 'fail');
+          failed++;
+        }
+      } else {
+        log('  ✗ FAILED: Core is null', 'fail');
+        failed++;
+      }
+    } catch (err) {
+      log(`  ✗ FAILED: ${err.message}`, 'fail');
+      console.error(err);
+      failed++;
+    }
+  }
+
+  log('\n========================================', 'info');
+  log('Test Summary', 'info');
+  log('========================================', 'info');
+  log(`Total: ${passed + failed}, Passed: ${passed}, Failed: ${failed}`);
+  
+  if (failed === 0) {
+    log('✓ All tests PASSED!', 'pass');
+  } else {
+    log(`✗ ${failed} tests FAILED!`, 'fail');
+  }
+  
+  window.testsDone = true;
+}
+
+runTests().catch(err => {
+  log('FATAL ERROR: ' + err.message, 'fail');
+  console.error(err);
+  window.testsDone = true;
+});
+</script>
+</body>
+</html>

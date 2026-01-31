@@ -23,11 +23,13 @@ const outputDir = join(projectDir, 'output');
 const args = process.argv.slice(2);
 const testFilter = args[0] || 'all';
 
-// Test files to run - mirrors Python test_magnetic.py
+// Test files to run - mirrors Python test_magnetic.py and test_builder.py
 const TEST_FILES = {
+  extrude: { file: 'test_extrude.html', name: 'Extrude Position Test' },
   scale: { file: 'scale_test.html', name: 'Scale Test' },
   concentric: { file: 'concentric_test.html', name: 'Concentric Test' },
-  magnetic: { file: 'test_magnetic.html', name: 'Magnetic Tests (mirrors test_magnetic.py)' }
+  magnetic: { file: 'test_magnetic.html', name: 'Magnetic Tests (mirrors test_magnetic.py)' },
+  shapes: { file: 'test_shapes.html', name: 'Shape Tests (mirrors test_builder.py)' }
 };
 
 // Create output directory
@@ -141,7 +143,8 @@ async function runTestFile(browser, testKey, testInfo) {
     // Check if tests passed
     const passed = (results.includes('All basic tests completed') || 
                    results.includes('All tests PASSED') ||
-                   results.includes('✓ All tests PASSED')) && 
+                   results.includes('✓ All tests PASSED') ||
+                   results.includes('✓ Test complete')) && 
                   !results.includes('FAILED') &&
                   !results.includes('FATAL');
     
@@ -200,7 +203,7 @@ async function runTestFile(browser, testKey, testInfo) {
 
 async function runTests(viteProcess) {
   const browser = await puppeteer.launch({
-    headless: true,
+    headless: 'new',
     args: ['--no-sandbox', '--disable-setuid-sandbox']
   });
 

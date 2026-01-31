@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Extrude Position Test</title>
+</head>
+<body>
+  <h1>Extrude Position Test</h1>
+  <pre id="log"></pre>
+
+<script type="module">
+import opencascade from 'replicad-opencascadejs/src/replicad_single.js';
+import opencascadeWasm from 'replicad-opencascadejs/src/replicad_single.wasm?url';
+import { setOC, makeBaseBox, sketchRectangle } from 'replicad';
+
+const log = (msg) => {
+  document.getElementById('log').textContent += msg + '\n';
+  console.log(msg);
+};
+
+const oc = await opencascade({
+  locateFile: () => opencascadeWasm
+});
+setOC(oc);
+
+log('Testing makeBaseBox vs sketch.extrude positioning...\n');
+
+// Test 1: makeBaseBox(10, 10, 20) - should be centered
+const box = makeBaseBox(10, 10, 20);
+const boxBounds = box.boundingBox;
+log('makeBaseBox(10, 10, 20):');
+log(`  Z min: ${boxBounds.bounds[0][2].toFixed(3)}`);
+log(`  Z max: ${boxBounds.bounds[1][2].toFixed(3)}`);
+log(`  Height: ${(boxBounds.bounds[1][2] - boxBounds.bounds[0][2]).toFixed(3)}`);
+log('');
+
+// Test 2: sketchRectangle(10, 10).extrude(20) - should start at Z=0
+const sketch = sketchRectangle(10, 10);
+const extruded = sketch.extrude(20);
+const extrudedBounds = extruded.boundingBox;
+log('sketchRectangle(10, 10).extrude(20):');
+log(`  Z min: ${extrudedBounds.bounds[0][2].toFixed(3)}`);
+log(`  Z max: ${extrudedBounds.bounds[1][2].toFixed(3)}`);
+log(`  Height: ${(extrudedBounds.bounds[1][2] - extrudedBounds.bounds[0][2]).toFixed(3)}`);
+log('');
+
+// Test 3: E shape simulation
+const B = 12.6;
+const D = 8.95;
+const E = 17.9;
+const C = 7.2;
+const F = 7.25;
+const A = 25.1;
+
+log('E shape simulation (B=12.6, D=8.95):');
+
+// Base sketch extruded
+const baseSketch = sketchRectangle(A, C);
+const base = baseSketch.extrude(B);
+const baseBounds = base.boundingBox;
+log(`  Base after extrude(B): Z from ${baseBounds.bounds[0][2].toFixed(3)} to ${baseBounds.bounds[1][2].toFixed(3)}`);
+
+// Winding window box - FIXED: replicad starts at Z=0, not centered
+const windowZ = B - D;  // No need for D/2 offset since box starts at Z=0
+log(`  Winding window translate Z = B-D = ${B} - ${D} = ${windowZ.toFixed(3)}`);
+
+const windingWindow = makeBaseBox(E, C, D).translate([0, 0, windowZ]);
+const windowBounds = windingWindow.boundingBox;
+log(`  Window after translate: Z from ${windowBounds.bounds[0][2].toFixed(3)} to ${windowBounds.bounds[1][2].toFixed(3)}`);
+
+// After getShapeExtras translates by -B
+log(`  After translating by -B = ${-B}:`);
+log(`    Base: Z from ${(baseBounds.bounds[0][2] - B).toFixed(3)} to ${(baseBounds.bounds[1][2] - B).toFixed(3)}`);
+log(`    Window: Z from ${(windowBounds.bounds[0][2] - B).toFixed(3)} to ${(windowBounds.bounds[1][2] - B).toFixed(3)}`);
+
+log('');
+log('Expected: Window Z from -D = -8.95 to 0');
+log('Expected: Base Z from -B = -12.6 to 0');
+
+// Actually cut and translate to see final result
+const centralColumn = makeBaseBox(F, C, D).translate([0, 0, windowZ]);
+const negativeWindow = windingWindow.cut(centralColumn);
+const pieceBeforeTranslate = base.cut(negativeWindow);
+const finalPiece = pieceBeforeTranslate.translate([0, 0, -B]);
+
+const finalBounds = finalPiece.boundingBox;
+log('');
+log('Final piece bounds:');
+log(`  X: ${finalBounds.bounds[0][0].toFixed(3)} to ${finalBounds.bounds[1][0].toFixed(3)} (expected: ${(-A/2).toFixed(3)} to ${(A/2).toFixed(3)})`);
+log(`  Y: ${finalBounds.bounds[0][1].toFixed(3)} to ${finalBounds.bounds[1][1].toFixed(3)} (expected: ${(-C/2).toFixed(3)} to ${(C/2).toFixed(3)})`);
+log(`  Z: ${finalBounds.bounds[0][2].toFixed(3)} to ${finalBounds.bounds[1][2].toFixed(3)} (expected: ${-B} to 0)`);
+
+log('');
+log('Done!');
+</script>
+</body>
+</html>
