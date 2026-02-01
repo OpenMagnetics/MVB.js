@@ -28,7 +28,9 @@ export const WireType = Object.freeze({
  */
 export const ColumnShape = Object.freeze({
   ROUND: 'round',
-  RECTANGULAR: 'rectangular'
+  RECTANGULAR: 'rectangular',
+  OBLONG: 'oblong',
+  EPX: 'epx'  // Stadium shape with one side flat (like EPX cores)
 });
 
 /**

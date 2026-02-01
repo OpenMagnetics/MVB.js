@@ -313,12 +313,63 @@ export class ETDShape extends ERShape {
 }
 
 // ==========================================================================
-// EL Shape (Planar E, extends E)
+// EL Shape (Planar E / Planar EL, extends E)
+// Planar EL cores may have F2 dimension for oblong/stadium central column.
+// When F2 is present and different from F, the column is stadium-shaped.
 // ==========================================================================
 
 export class ELShape extends EShape {
   getDimensionsAndSubtypes() {
-    return { 1: ['A', 'B', 'C', 'D', 'E', 'F'] };
+    // EL cores may have F2 (oblong column depth) and R (corner radius)
+    return { 1: ['A', 'B', 'C', 'D', 'E', 'F', 'F2', 'R'] };
+  }
+
+  getNegativeWindingWindow(dimensions) {
+    const { makeBaseBox, makeCylinder } = this.r;
+    
+    // Check if column is oblong (F2 defined and different from F)
+    const hasOblongColumn = dimensions.F2 && Math.abs(dimensions.F2 - dimensions.F) > 0.0001;
+    
+    if (hasOblongColumn) {
+      // Stadium-shaped winding window
+      // F = column width (X direction, shorter)
+      // F2 = column depth (Y direction, longer)
+      
+      // Create rectangular winding window cutout
+      const windingWindowCube = makeBaseBox(dimensions.E, dimensions.C, dimensions.D)
+        .translate([0, 0, dimensions.B - dimensions.D]);
+      
+      // Create stadium-shaped central column
+      // Stadium: rectangle with semicircular ends along Y axis
+      const halfWidth = dimensions.F / 2;  // X direction
+      const halfDepth = dimensions.F2 / 2;  // Y direction
+      const semicircleRadius = halfWidth;
+      const rectHalfLength = halfDepth - semicircleRadius;
+      
+      let centralColumn;
+      if (rectHalfLength <= 0) {
+        // If F2 <= F, it's actually round
+        centralColumn = makeCylinder(halfWidth, dimensions.D)
+          .translate([0, 0, dimensions.B - dimensions.D]);
+      } else {
+        // Build stadium: center rectangle + two semicircles
+        const centerRect = makeBaseBox(dimensions.F, rectHalfLength * 2, dimensions.D)
+          .translate([0, 0, dimensions.B - dimensions.D]);
+        
+        const topSemicircle = makeCylinder(semicircleRadius, dimensions.D)
+          .translate([0, rectHalfLength, dimensions.B - dimensions.D]);
+        
+        const bottomSemicircle = makeCylinder(semicircleRadius, dimensions.D)
+          .translate([0, -rectHalfLength, dimensions.B - dimensions.D]);
+        
+        centralColumn = centerRect.fuse(topSemicircle).fuse(bottomSemicircle);
+      }
+      
+      return windingWindowCube.cut(centralColumn);
+    } else {
+      // Rectangular column - use parent's implementation
+      return super.getNegativeWindingWindow(dimensions);
+    }
   }
 }
 
@@ -1259,20 +1310,75 @@ export class PMShape extends PShape {
   }
 
   getShapeBase(data) {
-    const { draw, sketchCircle } = this.r;
+    const { sketchCircle } = this.r;
     const dimensions = data.dimensions;
-    const familySubtype = data.familySubtype || '1';
     
-    // Simplified: use circle for PM shape
+    // Use circular base like P shape
     return sketchCircle(dimensions.A / 2);
   }
 
   getShapeExtras(data, piece) {
-    const { makeCylinder } = this.r;
+    const { makeCylinder, draw } = this.r;
     const dimensions = data.dimensions;
+    const familySubtype = data.familySubtype || '1';
     
-    // Add central column
-    // Note: replicad's makeCylinder starts at Z=0 (not centered)
+    const c = dimensions.C / 2;
+    const a = dimensions.A / 2;
+    const f = dimensions.F / 2;
+
+    // Default alpha based on subtype (angle at which openings meet at center)
+    let alpha = dimensions.alpha;
+    if (!alpha || alpha === 0) {
+      alpha = familySubtype === '1' ? 120 : 90;
+    }
+    const halfAlphaRad = (alpha / 2 / 180) * Math.PI;
+
+    // Calculate wedge geometry
+    // The wedge apex is at (0, ±C) and opens outward at angle alpha
+    // The wedge needs to extend past the outer radius A/2 to fully cut through
+    const wedgeLength = a * 1.5;  // Extend past outer radius
+    
+    // Calculate wedge half-width at the outer edge
+    const wedgeHalfWidth = wedgeLength * Math.tan(halfAlphaRad);
+
+    // Create wedge-shaped cuts
+    const wedgeHeight = dimensions.B;
+    let wedge;
+    
+    if (familySubtype === '1') {
+      // Subtype 1: Pointed wedge - apex comes to a point at (0, ±c)
+      const wedgeSketch = draw()
+        .movePointerTo([0, 0])  // apex (point)
+        .lineTo([wedgeHalfWidth, wedgeLength])  // right corner
+        .lineTo([-wedgeHalfWidth, wedgeLength])  // left corner
+        .close()
+        .sketchOnPlane('XY');
+      
+      wedge = wedgeSketch.extrude(wedgeHeight);
+    } else {
+      // Subtype 2: Truncated wedge - flat edge of width F at the apex
+      // The flat edge is at Y=0 (which will be translated to Y=±c)
+      // and spans from X=-f to X=+f
+      const wedgeSketch = draw()
+        .movePointerTo([-f, 0])  // left side of flat edge
+        .lineTo([f, 0])  // right side of flat edge (width = F)
+        .lineTo([wedgeHalfWidth, wedgeLength])  // right corner
+        .lineTo([-wedgeHalfWidth, wedgeLength])  // left corner
+        .close()
+        .sketchOnPlane('XY');
+      
+      wedge = wedgeSketch.extrude(wedgeHeight);
+    }
+    
+    // Position and cut the +Y opening (apex/flat at Y = +c)
+    const topWedge = wedge.clone().translate([0, c, 0]);
+    piece = piece.cut(topWedge);
+    
+    // Position and cut the -Y opening (apex/flat at Y = -c, rotated 180°)
+    const bottomWedge = wedge.rotate(180, [0, 0, 0], [0, 0, 1]).translate([0, -c, 0]);
+    piece = piece.cut(bottomWedge);
+    
+    // Add central column (full height)
     const column = makeCylinder(dimensions.F / 2, dimensions.B);
     piece = piece.fuse(column);
     
@@ -1282,6 +1388,7 @@ export class PMShape extends PShape {
       piece = piece.cut(hole);
     }
     
+    // Translate so bottom is at Z=0
     piece = piece.translate([0, 0, -dimensions.B]);
     return piece;
   }
@@ -1348,10 +1455,13 @@ export function getCore(replicad, geometricalDescription) {
     
     if (part.type === 'spacer') {
       // Create spacer box
+      // MAS dimensions: [width, height, depth]
+      // Replicad makeBaseBox: (xLength, yLength, zLength)
+      // After coordinate conversion: X=radial, Y=depth, Z=height
       const spacer = makeBaseBox(
-        part.dimensions[0],
-        part.dimensions[2],
-        part.dimensions[1]
+        part.dimensions[0],  // width → xLength
+        part.dimensions[2],  // depth → yLength  
+        part.dimensions[1]   // height (thickness) → zLength
       ).translate(convertAxis(part.coordinates));
       
       pieces.push(spacer);
@@ -1378,7 +1488,7 @@ export function getCore(replicad, geometricalDescription) {
       if (rotZ !== 0) piece = piece.rotate(rotZ, [0, 0, 0], [0, 0, 1]);
       if (rotY !== 0) piece = piece.rotate(rotY, [0, 0, 0], [0, 1, 0]);
       
-      // Apply machining (gaps)
+      // Apply machining (gaps) from MKF data
       if (part.machining) {
         for (const machining of part.machining) {
           piece = shapeBuilder.applyMachining(piece, machining, shapeData.dimensions);

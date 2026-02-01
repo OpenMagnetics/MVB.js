@@ -50,10 +50,14 @@ export function setTessellationQuality(segmentsPerCircle = 20, linearTolerance =
  * Builder for 3D magnetic component geometry using Replicad.
  * 
  * Coordinate System (MAS to Replicad mapping):
- * - For concentric cores (E, PQ, RM, etc.):
- *   - X axis: Core depth direction (perpendicular to winding window)
- *   - Y axis: Core width direction (radial, distance from central column)
+ * - For concentric cores (E, EL, PQ, RM, etc.):
+ *   - X axis: Core width direction (radial, distance from central column, winding window direction)
+ *   - Y axis: Core depth direction (perpendicular to winding window)
  *   - Z axis: Core height direction (along core axis, vertical)
+ *   
+ *   MAS turn coordinates: [radial, height] -> Replicad [X, Z]
+ *   - coordinates[0] = radial position = X
+ *   - coordinates[1] = height position = Z
  * 
  * - For toroidal cores:
  *   - Y axis: Core axis (toroid revolves around Y)
@@ -88,7 +92,10 @@ export class ReplicadBuilder {
    * @returns {Object} - Replicad shape
    */
   getTurn(turnDescription, wireDescription, bobbinDescription, isToroidal = false) {
-    if (isToroidal || bobbinDescription.windingWindowAngle !== null) {
+    // Check for toroidal: either explicit flag or bobbin has windingWindowAngle defined
+    const hasWindingWindowAngle = bobbinDescription.windingWindowAngle !== undefined && 
+                                   bobbinDescription.windingWindowAngle !== null;
+    if (isToroidal || hasWindingWindowAngle) {
       return this._createToroidalTurn(turnDescription, wireDescription, bobbinDescription);
     } else {
       return this._createConcentricTurn(turnDescription, wireDescription, bobbinDescription);
@@ -124,23 +131,31 @@ export class ReplicadBuilder {
     }
 
     // Get bobbin/column dimensions
-    const halfColDepth = bobbinDescription.columnDepth * SCALE;
-    const halfColWidth = bobbinDescription.columnWidth * SCALE;
+    // MAS convention: columnWidth is radial direction (X), columnDepth is depth direction (Y)
+    // For turns, radial position (coordinates[0]) is distance from center in X direction
+    const halfColWidth = bobbinDescription.columnWidth * SCALE;  // Half column width in X
+    const halfColDepth = bobbinDescription.columnDepth * SCALE;  // Half column depth in Y
 
     // Get turn position from coordinates
     const coords = turnDescription.coordinates;
+    // coordinates[0] is radial position (distance from center column edge in X direction)
     const radialPos = coords.length > 0 ? coords[0] * SCALE : (halfColWidth + wireRadius);
     const heightPos = coords.length > 1 ? coords[1] * SCALE : 0;
 
-    // Corner radius
+    // Corner radius: distance from column edge to wire center
     let turnTurnRadius = radialPos - halfColWidth;
     if (turnTurnRadius < wireRadius) {
       turnTurnRadius = wireRadius;
     }
 
     let turn;
+    
+    // Determine column shape
+    const columnShape = bobbinDescription.columnShape?.toLowerCase() || 'rectangular';
+    const isRound = columnShape === ColumnShape.ROUND || columnShape === 'round';
+    const isOblong = columnShape === 'oblong';
 
-    if (bobbinDescription.columnShape === ColumnShape.ROUND) {
+    if (isRound) {
       // Round column: circular turn path
       const turnRadius = radialPos;
 
@@ -155,58 +170,138 @@ export class ReplicadBuilder {
         // Torus for round wire
         turn = this._makeTorus(turnRadius, wireRadius, [0, 0, heightPos], [0, 0, 1]);
       }
+    } else if (isOblong) {
+      // Oblong column: stadium-shaped turn path
+      // The column is a rectangle (in X) with semicircular ends (in Y)
+      // Turn wraps around with:
+      // - Straight sections along ±X sides (tubes along Y)
+      // - Semicircular arcs at ±Y ends
+      //
+      // Stadium dimensions: halfColWidth (X, the round part radius), halfColDepth (Y total half-length)
+      // The semicircle starts at Y = ±(halfColDepth - halfColWidth) and ends at Y = ±halfColDepth
+      
+      const pieces = [];
+      
+      // Calculate the Y position where the rectangular part ends and semicircle starts
+      const straightSectionHalfLength = halfColDepth - halfColWidth;
+      
+      // If straightSectionHalfLength <= 0, the column is actually round
+      if (straightSectionHalfLength <= 0) {
+        turn = this._makeTorus(radialPos, wireRadius, [0, 0, heightPos], [0, 0, 1]);
+      } else {
+        // Wire positions
+        const wireXPos = radialPos;  // Radial distance from center (in X direction)
+        const tubeYLength = 2 * straightSectionHalfLength;  // Straight sections along Y
+
+        // Create tubes for the straight sections (along Y, at X = ±wireXPos)
+        const createTubeAlongY = (length, xCenter, yOffset = 0) => {
+          if (isRectangularWire) {
+            return this._makeBox(wireWidth, length, wireHeight)
+              .translate([xCenter, yOffset, heightPos]);
+          } else {
+            // Cylinder pointing along +Y
+            const cyl = makeCylinder(wireRadius, length)
+              .rotate(-90, [0, 0, 0], [1, 0, 0]); // Point along +Y
+            return cyl.translate([xCenter, yOffset - length/2, heightPos]);
+          }
+        };
+
+        // +X side tube (along Y, at X = +wireXPos)
+        pieces.push(createTubeAlongY(tubeYLength, wireXPos));
+        // -X side tube (along Y, at X = -wireXPos)
+        pieces.push(createTubeAlongY(tubeYLength, -wireXPos));
+
+        // Semicircular arcs at ±Y ends
+        // At +Y end (center at Y = +straightSectionHalfLength): semicircle from +X to -X (180°)
+        // At -Y end (center at Y = -straightSectionHalfLength): semicircle from -X to +X (180°)
+        
+        // For oblong columns, the half-torus major radius is the distance from column center
+        // to the wire center (radialPos), NOT the corner radius (turnTurnRadius).
+        // This ensures multilayer turns are correctly positioned at different radial distances.
+        const halfTorusMajorRadius = radialPos;
+        
+        // Create half torus (180°) for the semicircular ends
+        const createHalfTorus = (centerY, startAngleDeg) => {
+          return this._makeHalfTorus(
+            halfTorusMajorRadius,
+            wireRadius,
+            [0, centerY, heightPos],
+            startAngleDeg
+          );
+        };
+
+        // +Y semicircle: center at Y = +straightSectionHalfLength
+        // Wire comes from +X side, goes around to -X side
+        // Start angle 0 (pointing +X), sweep 180° to end at 180° (pointing -X)
+        pieces.push(createHalfTorus(+straightSectionHalfLength, 0));
+        
+        // -Y semicircle: center at Y = -straightSectionHalfLength  
+        // Wire comes from -X side, goes around to +X side
+        // Start angle 180 (pointing -X), sweep 180° to end at 0° (pointing +X)
+        pieces.push(createHalfTorus(-straightSectionHalfLength, 180));
+
+        turn = makeCompound(pieces);
+      }
     } else {
       // Rectangular column: build using tubes and corners
+      // 
+      // Coordinate system:
+      // - X axis: Core width direction (radial, distance from central column) - winding window opens in ±X
+      // - Y axis: Core depth direction (perpendicular to winding window)
+      // - Z axis: Core height direction (along core axis, vertical)
+      //
+      // For rectangular/oblong columns, the turn is a racetrack shape:
+      // - 4 straight tubes (one per side of the column)
+      // - 4 corner quarter-tori connecting the tubes
+      //
+      // Tube positions:
+      // - +X/-X sides: tubes run along Y (depth), at X = ±radialPos
+      // - +Y/-Y sides: tubes run along X (width), at Y = ±(halfColDepth + turnTurnRadius)
+      
       const pieces = [];
 
-      const wireYPos = radialPos;
-      const wireXPos = halfColDepth + turnTurnRadius;
-      const tubeXLength = 2 * halfColDepth;
-      const tubeYLength = 2 * halfColWidth;
+      // Wire positions based on column dimensions and radial position
+      const wireXPos = radialPos;  // Radial distance from center (in X direction)
+      const wireYPos = halfColDepth + turnTurnRadius;  // Depth + corner radius
+      const tubeYLength = 2 * halfColDepth;  // Tubes along Y span full column depth
+      const tubeXLength = 2 * halfColWidth;  // Tubes along X span full column width
 
       // Create tubes (cylinders for round wire, boxes for rectangular)
-      // +Y/-Y sides: tubes run along X axis
-      // +X/-X sides: tubes run along Y axis
-      //
-      // makeCylinder creates a cylinder from Z=0 to Z=length
-      // After rotating 90° around Y: extends from X=0 to X=length
-      // After rotating -90° around X: extends from Y=0 to Y=length
-      const createTubeAlongX = (length, yCenter) => {
-        if (isRectangularWire) {
-          return this._makeBox(length, wireWidth, wireHeight)
-            .translate([0, yCenter, heightPos]);
-        } else {
-          // Cylinder pointing along +X, from X=0 to X=length after rotation
-          // Then translate to start at X=-halfColDepth
-          const cyl = makeCylinder(wireRadius, length)
-            .rotate(90, [0, 0, 0], [0, 1, 0]); // Point along +X
-          return cyl.translate([-halfColDepth, yCenter, heightPos]);
-        }
-      };
-
       const createTubeAlongY = (length, xCenter) => {
         if (isRectangularWire) {
           return this._makeBox(wireWidth, length, wireHeight)
             .translate([xCenter, 0, heightPos]);
         } else {
-          // Cylinder pointing along +Y, from Y=0 to Y=length after rotation
-          // Then translate to start at Y=-halfColWidth
+          // Cylinder pointing along +Y
           const cyl = makeCylinder(wireRadius, length)
             .rotate(-90, [0, 0, 0], [1, 0, 0]); // Point along +Y
-          return cyl.translate([xCenter, -halfColWidth, heightPos]);
+          return cyl.translate([xCenter, -halfColDepth, heightPos]);
         }
       };
 
-      // +Y side tube (along X, at Y = wireYPos)
-      pieces.push(createTubeAlongX(tubeXLength, wireYPos));
-      // -Y side tube (along X, at Y = -wireYPos)
-      pieces.push(createTubeAlongX(tubeXLength, -wireYPos));
-      // +X side tube (along Y, at X = wireXPos)
+      const createTubeAlongX = (length, yCenter) => {
+        if (isRectangularWire) {
+          return this._makeBox(length, wireWidth, wireHeight)
+            .translate([0, yCenter, heightPos]);
+        } else {
+          // Cylinder pointing along +X
+          const cyl = makeCylinder(wireRadius, length)
+            .rotate(90, [0, 0, 0], [0, 1, 0]); // Point along +X
+          return cyl.translate([-halfColWidth, yCenter, heightPos]);
+        }
+      };
+
+      // +X side tube (along Y, at X = +wireXPos)
       pieces.push(createTubeAlongY(tubeYLength, wireXPos));
       // -X side tube (along Y, at X = -wireXPos)
       pieces.push(createTubeAlongY(tubeYLength, -wireXPos));
+      // +Y side tube (along X, at Y = +wireYPos)
+      pieces.push(createTubeAlongX(tubeXLength, wireYPos));
+      // -Y side tube (along X, at Y = -wireYPos)
+      pieces.push(createTubeAlongX(tubeXLength, -wireYPos));
 
       // Four corners (quarter tori)
+      // Corners are at the intersection of column edges
       const createCorner = (cornerX, cornerY, startAngleDeg) => {
         return this._makeQuarterTorus(
           turnTurnRadius,
@@ -216,10 +311,11 @@ export class ReplicadBuilder {
         );
       };
 
-      pieces.push(createCorner(+halfColDepth, +halfColWidth, 0));
-      pieces.push(createCorner(-halfColDepth, +halfColWidth, 90));
-      pieces.push(createCorner(-halfColDepth, -halfColWidth, 180));
-      pieces.push(createCorner(+halfColDepth, -halfColWidth, 270));
+      // Corners at (±halfColWidth, ±halfColDepth)
+      pieces.push(createCorner(+halfColWidth, +halfColDepth, 0));
+      pieces.push(createCorner(-halfColWidth, +halfColDepth, 90));
+      pieces.push(createCorner(-halfColWidth, -halfColDepth, 180));
+      pieces.push(createCorner(+halfColWidth, -halfColDepth, 270));
 
       turn = makeCompound(pieces);
     }
@@ -400,11 +496,36 @@ export class ReplicadBuilder {
     // Combine top half first
     const topHalf = makeCompound(pieces);
     
-    // Mirror the compound (not individual pieces) for bottom half
-    const bottomHalf = topHalf.clone().mirror('XZ');
+    // Mirror for bottom half - use scale with -1 on Y axis
+    // In replicad, mirror('XZ') is equivalent to scaling Y by -1
+    let bottomHalf;
+    try {
+      // Try using mirror if available
+      if (typeof topHalf.mirror === 'function') {
+        bottomHalf = topHalf.mirror('XZ');
+      } else {
+        // Fallback: use scale transformation
+        bottomHalf = topHalf.scale(1, -1, 1);
+      }
+    } catch (e) {
+      // If both fail, build bottom half manually by negating Y in geometry creation
+      console.warn('Toroidal turn mirroring failed, using scale fallback:', e.message);
+      try {
+        bottomHalf = topHalf.scale(1, -1, 1);
+      } catch (e2) {
+        // Last resort: skip bottom half
+        console.error('Could not create bottom half of toroidal turn:', e2.message);
+        bottomHalf = null;
+      }
+    }
     
     // Combine top and bottom
-    let fullTurn = makeCompound([topHalf, bottomHalf]);
+    let fullTurn;
+    if (bottomHalf) {
+      fullTurn = makeCompound([topHalf, bottomHalf]);
+    } else {
+      fullTurn = topHalf;
+    }
 
     // Apply rotation
     if (Math.abs(turnRotationDeg) > 0.001) {
@@ -435,17 +556,36 @@ export class ReplicadBuilder {
     const colWidth = bobbinDescription.columnWidth * SCALE;
     const colThickness = bobbinDescription.columnThickness * SCALE;
     const wallThickness = bobbinDescription.wallThickness * SCALE;
-    const wwHeight = bobbinDescription.windingWindowHeight * SCALE;
-    const wwWidth = bobbinDescription.windingWindowWidth * SCALE;
+    
+    // Extract winding window dimensions - handle both flat properties and windingWindows array
+    let wwHeight, wwWidth;
+    if (bobbinDescription.windingWindowHeight !== undefined && bobbinDescription.windingWindowWidth !== undefined) {
+      wwHeight = bobbinDescription.windingWindowHeight * SCALE;
+      wwWidth = bobbinDescription.windingWindowWidth * SCALE;
+    } else if (bobbinDescription.windingWindows && bobbinDescription.windingWindows.length > 0) {
+      const ww = bobbinDescription.windingWindows[0];
+      wwHeight = ww.height * SCALE;
+      wwWidth = ww.width * SCALE;
+    } else {
+      console.warn('getBobbin: No winding window dimensions found');
+      return null;
+    }
 
     // Total dimensions
+    // Coordinate system: X = width (radial direction), Y = depth
     const totalHeight = wwHeight + wallThickness * 2;
-    const totalWidth = wwWidth + colWidth;
-    const totalDepth = wwWidth + colDepth;
+    const totalWidth = wwWidth + colWidth;  // X extent
+    const totalDepth = wwWidth + colDepth;  // Y extent
 
     let bobbin;
+    
+    // Determine column shape
+    const columnShape = bobbinDescription.columnShape?.toLowerCase() || 'rectangular';
+    const isRound = columnShape === ColumnShape.ROUND || columnShape === 'round';
+    const isOblong = columnShape === 'oblong';
+    const isEpx = columnShape === 'epx';  // EPX has a semicircular back side
 
-    if (bobbinDescription.columnShape === ColumnShape.ROUND) {
+    if (isRound) {
       // Cylindrical bobbin
       // makeCylinder creates from Z=0 to Z=height, need to center at Z=0
       bobbin = makeCylinder(totalWidth, totalHeight)
@@ -461,21 +601,84 @@ export class ReplicadBuilder {
       const negWwCut = negWw.cut(centralCol);
       bobbin = bobbin.cut(negWwCut);
       bobbin = bobbin.cut(centralHole);
-    } else {
-      // Box-shaped bobbin
-      // makeBaseBox creates boxes that start at Z=0 and extrude to Z=height
-      // Need to center them vertically like CadQuery's .box() does
-      bobbin = this._makeBox(totalDepth * 2, totalWidth * 2, totalHeight)
+    } else if (isOblong) {
+      // Oblong bobbin: stadium shape (rectangle with semicircular ends)
+      // The column has width (shorter, X direction) and depth (longer, Y direction)
+      // Stadium is oriented with the longer axis along Y
+      
+      // Outer bobbin shell - still rectangular for simplicity
+      bobbin = this._makeBox(totalWidth * 2, totalDepth * 2, totalHeight)
         .translate([0, 0, -totalHeight / 2]);
 
-      const negWw = this._makeBox(totalDepth * 2, totalWidth * 2, wwHeight)
+      // Create negative winding window
+      const negWw = this._makeBox(totalWidth * 2, totalDepth * 2, wwHeight)
         .translate([0, 0, -wwHeight / 2]);
-      const centralCol = this._makeBox(colDepth * 2, colWidth * 2, wwHeight)
+      
+      // Central column: stadium shape (rectangle + two semicircles)
+      // Stadium dimensions: width = colWidth*2 (X), length = colDepth*2 (Y)
+      // The semicircle radius = colWidth (half the short dimension)
+      const centralCol = this._makeStadium(colWidth, colDepth, wwHeight)
         .translate([0, 0, -wwHeight / 2]);
 
-      const innerDepth = colDepth - colThickness;
+      // Central hole (for the core): also stadium shape but smaller
       const innerWidth = colWidth - colThickness;
-      const centralHole = this._makeBox(innerDepth * 2, innerWidth * 2, totalHeight)
+      const innerDepth = colDepth - colThickness;
+      const centralHole = this._makeStadium(innerWidth, innerDepth, totalHeight)
+        .translate([0, 0, -totalHeight / 2]);
+
+      const negWwCut = negWw.cut(centralCol);
+      bobbin = bobbin.cut(negWwCut);
+      bobbin = bobbin.cut(centralHole);
+    } else if (isEpx) {
+      // EPX bobbin: rectangular front side, semicircular back side
+      // The EPX column is like a stadium but with offset center:
+      // - Front (winding window side, -Y direction): flat/rectangular
+      // - Back (+Y direction): semicircular
+      // 
+      // EPX column structure: rectangle in center + semicircle on back (+Y side)
+      // The semicircle radius = colWidth (half the column width)
+      const semicircleRadius = colWidth;
+      const rectangularPartDepth = colDepth - semicircleRadius;  // Distance from center to where semicircle starts
+      
+      // Outer bobbin shell - rectangular
+      bobbin = this._makeBox(totalWidth * 2, totalDepth * 2, totalHeight)
+        .translate([0, 0, -totalHeight / 2]);
+
+      // Create negative winding window (rectangular)
+      const negWw = this._makeBox(totalWidth * 2, totalDepth * 2, wwHeight)
+        .translate([0, 0, -wwHeight / 2]);
+      
+      // Central column: rectangle + semicircle on +Y side (back)
+      // Use _makeHalfStadium helper for EPX-style column
+      const centralCol = this._makeHalfStadium(colWidth, colDepth, wwHeight)
+        .translate([0, 0, -wwHeight / 2]);
+
+      // Central hole: same shape but smaller
+      const innerWidth = colWidth - colThickness;
+      const innerDepth = colDepth - colThickness;
+      const centralHole = this._makeHalfStadium(innerWidth, innerDepth, totalHeight)
+        .translate([0, 0, -totalHeight / 2]);
+
+      const negWwCut = negWw.cut(centralCol);
+      bobbin = bobbin.cut(negWwCut);
+      bobbin = bobbin.cut(centralHole);
+    } else {
+      // Rectangular bobbin
+      // _makeBox(width, depth, height) where X=width, Y=depth, Z=height
+      // totalWidth is X extent (radial direction)
+      // totalDepth is Y extent (depth direction)
+      bobbin = this._makeBox(totalWidth * 2, totalDepth * 2, totalHeight)
+        .translate([0, 0, -totalHeight / 2]);
+
+      const negWw = this._makeBox(totalWidth * 2, totalDepth * 2, wwHeight)
+        .translate([0, 0, -wwHeight / 2]);
+      // Central column: X = colWidth * 2, Y = colDepth * 2
+      const centralCol = this._makeBox(colWidth * 2, colDepth * 2, wwHeight)
+        .translate([0, 0, -wwHeight / 2]);
+
+      const innerWidth = colWidth - colThickness;
+      const innerDepth = colDepth - colThickness;
+      const centralHole = this._makeBox(innerWidth * 2, innerDepth * 2, totalHeight)
         .translate([0, 0, -totalHeight / 2]);
 
       const negWwCut = negWw.cut(centralCol);
@@ -601,6 +804,95 @@ export class ReplicadBuilder {
   }
 
   /**
+   * Create a stadium (oblong) shape - a rectangle with semicircular ends.
+   * The stadium is centered at origin with the longer axis along Y.
+   * 
+   * @param {number} halfWidth - Half of the width (X direction, the shorter dimension)
+   * @param {number} halfDepth - Half of the total length (Y direction, includes semicircles)
+   * @param {number} height - Height of the extrusion (Z direction)
+   * @returns {Object} - Replicad solid
+   * @private
+   */
+  _makeStadium(halfWidth, halfDepth, height) {
+    const { makeCompound, makeCylinder } = this.r;
+    
+    // Stadium shape: two semicircles at Y = ±(halfDepth - halfWidth), connected by rectangle
+    // The semicircle radius = halfWidth
+    const semicircleRadius = halfWidth;
+    const rectangleHalfLength = halfDepth - halfWidth;  // Distance from center to where semicircles start
+    
+    // If the column is actually round (halfDepth <= halfWidth), just make a cylinder
+    if (rectangleHalfLength <= 0) {
+      return makeCylinder(halfWidth, height);
+    }
+    
+    const pieces = [];
+    
+    // Central rectangular section
+    // Goes from Y = -rectangleHalfLength to Y = +rectangleHalfLength
+    // Width = 2 * halfWidth (X direction)
+    const centralRect = this._makeBox(halfWidth * 2, rectangleHalfLength * 2, height);
+    pieces.push(centralRect);
+    
+    // +Y semicircle (at Y = +rectangleHalfLength)
+    const semicircleY1 = makeCylinder(semicircleRadius, height)
+      .translate([0, rectangleHalfLength, 0]);
+    pieces.push(semicircleY1);
+    
+    // -Y semicircle (at Y = -rectangleHalfLength)
+    const semicircleY2 = makeCylinder(semicircleRadius, height)
+      .translate([0, -rectangleHalfLength, 0]);
+    pieces.push(semicircleY2);
+    
+    // Fuse all pieces together
+    let result = pieces[0];
+    for (let i = 1; i < pieces.length; i++) {
+      result = result.fuse(pieces[i]);
+    }
+    
+    return result;
+  }
+
+  /**
+   * Create a half-stadium (EPX) shape - a rectangle with ONE semicircular end (on +Y side).
+   * This is the column shape for EPX cores: flat on winding window side, round on back.
+   * 
+   * @param {number} halfWidth - Half of the width (X direction)
+   * @param {number} halfDepth - Half of the total depth (Y direction, includes semicircle on +Y)
+   * @param {number} height - Height of the extrusion (Z direction)
+   * @returns {Object} - Replicad solid
+   * @private
+   */
+  _makeHalfStadium(halfWidth, halfDepth, height) {
+    const { makeCylinder } = this.r;
+    
+    // Half-stadium shape: semicircle at Y = +(halfDepth - halfWidth), flat at Y = -halfDepth
+    // The semicircle radius = halfWidth
+    const semicircleRadius = halfWidth;
+    const rectangleHalfLength = halfDepth - halfWidth;  // Distance from center to where semicircle starts
+    
+    // If the shape is actually round (halfDepth <= halfWidth), just make a cylinder
+    if (rectangleHalfLength <= 0) {
+      return makeCylinder(halfWidth, height);
+    }
+    
+    // Central rectangular section
+    // The rectangle spans from Y = -halfDepth to Y = +rectangleHalfLength
+    // Width = 2 * halfWidth (X direction)
+    const rectDepth = halfDepth + rectangleHalfLength;  // From -halfDepth to +rectangleHalfLength
+    const rectCenterY = (-halfDepth + rectangleHalfLength) / 2;  // Center of the rectangle in Y
+    const centralRect = this._makeBox(halfWidth * 2, rectDepth, height)
+      .translate([0, rectCenterY, 0]);
+    
+    // +Y semicircle (at Y = +rectangleHalfLength, which is halfDepth - halfWidth from center)
+    const semicircle = makeCylinder(semicircleRadius, height)
+      .translate([0, rectangleHalfLength, 0]);
+    
+    // Fuse rectangle and semicircle
+    return centralRect.fuse(semicircle);
+  }
+
+  /**
    * Create a torus by revolving a circle around an axis.
    * Uses direct OpenCASCADE API for proper cross-section orientation.
    * @private
@@ -654,8 +946,6 @@ export class ReplicadBuilder {
     const { Solid, getOC } = this.r;
     const oc = getOC();
     
-    console.log(`_makeQuarterTorus called: major=${majorRadius}, minor=${minorRadius}, start=${startAngleDeg}`);
-    
     try {
       // Use BRepPrimAPI_MakeTorus_6 which takes (gp_Ax2, R1, R2, angle)
       // to create a partial torus
@@ -686,6 +976,52 @@ export class ReplicadBuilder {
     } catch (e) {
       // Fallback: use a full torus (should not happen normally)
       console.warn('Quarter torus creation failed:', e.message);
+      return this._makeTorus(majorRadius, minorRadius, center, axis);
+    }
+  }
+
+  /**
+   * Create a half torus (180° arc) for semicircular turns around oblong columns.
+   * 
+   * @param {number} majorRadius - Bend radius (distance from arc center to wire center)
+   * @param {number} minorRadius - Wire radius
+   * @param {Array} center - [x, y, z] position of arc center
+   * @param {number} startAngleDeg - Starting angle in degrees (0=+X, 90=+Y, etc.)
+   *                                 The arc sweeps 180° CCW from this angle
+   * @param {Array} axis - Revolution axis, default [0, 0, 1] (Z axis)
+   * @private
+   */
+  _makeHalfTorus(majorRadius, minorRadius, center, startAngleDeg, axis = [0, 0, 1]) {
+    const { Solid, getOC } = this.r;
+    const oc = getOC();
+    
+    try {
+      // Use BRepPrimAPI_MakeTorus_6 which takes (gp_Ax2, R1, R2, angle)
+      // to create a partial torus with 180° sweep
+      
+      const originPnt = new oc.gp_Pnt_3(0, 0, 0);
+      const zDir = new oc.gp_Dir_4(axis[0], axis[1], axis[2]);
+      
+      // Start direction based on startAngleDeg
+      const startAngleRad = (startAngleDeg * Math.PI) / 180;
+      const xRefX = Math.cos(startAngleRad);
+      const xRefY = Math.sin(startAngleRad);
+      const xDir = new oc.gp_Dir_4(xRefX, xRefY, 0);
+      
+      const ax2 = new oc.gp_Ax2_2(originPnt, zDir, xDir);
+      
+      // Create partial torus: majorRadius, minorRadius, angle (180° = π)
+      const torusMaker = new oc.BRepPrimAPI_MakeTorus_6(ax2, majorRadius, minorRadius, Math.PI);
+      const torusShape = torusMaker.Shape();
+      
+      // Wrap in replicad Solid and translate to center
+      const halfTorus = new Solid(torusShape);
+      
+      // Translate to the arc center
+      return halfTorus.translate(center);
+    } catch (e) {
+      // Fallback: use a full torus
+      console.warn('Half torus creation failed:', e.message);
       return this._makeTorus(majorRadius, minorRadius, center, axis);
     }
   }
