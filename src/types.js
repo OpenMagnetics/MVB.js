@@ -1,15 +1,19 @@
 /**
  * OpenMagnetics Virtual Builder - Type Definitions
  * 
- * JavaScript equivalent of Python dataclasses for magnetic component geometry.
+ * Types aligned with MAS (Magnetic Agnostic Structure) JSON Schema.
+ * See: https://github.com/OpenMagnetics/MAS
+ * 
+ * Enum values match MAS schema definitions exactly. Factory functions
+ * provide defaults and normalization for MAS data structures.
  */
 
 // ==========================================================================
-// Enums
+// Enums (matching MAS schema values - see schemas/magnetic/wire.json, etc.)
 // ==========================================================================
 
 /**
- * Wire types supported.
+ * Wire types as defined in MAS magnetic/wire.json#/$defs/wireType
  * @readonly
  * @enum {string}
  */
@@ -22,7 +26,7 @@ export const WireType = Object.freeze({
 });
 
 /**
- * Bobbin column shapes.
+ * Bobbin column shapes as defined in MAS magnetic/bobbin.json#/$defs/columnShape
  * @readonly
  * @enum {string}
  */
@@ -30,44 +34,78 @@ export const ColumnShape = Object.freeze({
   ROUND: 'round',
   RECTANGULAR: 'rectangular',
   OBLONG: 'oblong',
-  EPX: 'epx'  // Stadium shape with one side flat (like EPX cores)
+  IRREGULAR: 'irregular'
 });
 
 /**
- * Core shape families.
+ * Core shape families as defined in MAS magnetic/core/shape.json#/$defs/coreShapeFamily
  * @readonly
  * @enum {string}
  */
 export const ShapeFamily = Object.freeze({
-  ETD: 'etd',
-  ER: 'er',
-  EP: 'ep',
-  EPX: 'epx',
-  PQ: 'pq',
+  C: 'c',
+  DRUM: 'drum',
   E: 'e',
-  PM: 'pm',
-  P: 'p',
-  RM: 'rm',
-  EQ: 'eq',
-  LP: 'lp',
-  PLANAR_ER: 'planar_er',
-  PLANAR_E: 'planar_e',
-  PLANAR_EL: 'planar_el',
   EC: 'ec',
   EFD: 'efd',
-  U: 'u',
-  UR: 'ur',
+  EI: 'ei',
+  EL: 'el',
+  ELP: 'elp',
+  EP: 'ep',
+  EPX: 'epx',
+  EQ: 'eq',
+  ER: 'er',
+  ETD: 'etd',
+  H: 'h',
+  LP: 'lp',
+  P: 'p',
+  PLANAR_E: 'planar e',
+  PLANAR_EL: 'planar el',
+  PLANAR_ER: 'planar er',
+  PM: 'pm',
+  PQ: 'pq',
+  PQI: 'pqi',
+  RM: 'rm',
+  ROD: 'rod',
   T: 't',
-  C: 'c'
+  U: 'u',
+  UI: 'ui',
+  UR: 'ur',
+  UT: 'ut'
+});
+
+/**
+ * Turn cross-sectional shapes as defined in MAS magnetic/coil.json#/$defs/turnCrossSectionalShape
+ * @readonly
+ * @enum {string}
+ */
+export const TurnCrossSectionalShape = Object.freeze({
+  ROUND: 'round',
+  RECTANGULAR: 'rectangular',
+  OVAL: 'oval'
+});
+
+/**
+ * Gap types as defined in MAS magnetic/core/gap.json#/$defs/gapType
+ * @readonly
+ * @enum {string}
+ */
+export const GapType = Object.freeze({
+  ADDITIVE: 'additive',
+  SUBTRACTIVE: 'subtractive',
+  RESIDUAL: 'residual'
 });
 
 // ==========================================================================
-// Helper Functions
+// Utility Functions for MAS Data Handling
 // ==========================================================================
 
 /**
- * Extract numeric value from dimensional data (handles dict with 'nominal' or plain value).
- * @param {*} value - Value to resolve
+ * Extract numeric value from MAS DimensionWithTolerance object.
+ * Handles both simple numbers and {nominal, minimum, maximum} objects.
+ * See: MAS schemas/utils.json#/$defs/dimensionWithTolerance
+ * 
+ * @param {number|Object} value - Value to resolve
  * @returns {number} - Resolved numeric value
  */
 export function resolveDimensionalValue(value) {
@@ -75,90 +113,110 @@ export function resolveDimensionalValue(value) {
     return 0.0;
   }
   if (typeof value === 'object' && !Array.isArray(value)) {
-    return value.nominal ?? value.minimum ?? value.maximum ?? 0.0;
+    // MAS DimensionWithTolerance: prefer nominal, fallback to min/max
+    if (value.nominal !== undefined && value.nominal !== null) {
+      return value.nominal;
+    }
+    if (value.minimum !== undefined && value.maximum !== undefined) {
+      return (value.minimum + value.maximum) / 2;
+    }
+    return value.minimum ?? value.maximum ?? 0.0;
   }
   return Number(value);
 }
 
 /**
- * Flatten dimensions object, extracting nominal values.
- * @param {Object} data - Object containing dimensions
- * @returns {Object} - Flattened dimensions with nominal values
+ * Flatten MAS dimensions object to simple numeric values.
+ * Converts {A: {nominal: 0.05}, B: {min: 0.02, max: 0.03}} to {A: 0.05, B: 0.025}
+ * 
+ * @param {Object} data - Object containing dimensions property (MAS shape data)
+ * @returns {Object} - Flattened dimensions with numeric values
  */
 export function flattenDimensions(data) {
   const dimensions = { ...data.dimensions };
   
   for (const [k, v] of Object.entries(dimensions)) {
     if (typeof v === 'object' && v !== null) {
-      if (v.nominal === null || v.nominal === undefined) {
+      let nominal = v.nominal;
+      if (nominal === null || nominal === undefined) {
         if (v.maximum === null || v.maximum === undefined) {
-          v.nominal = v.minimum;
+          nominal = v.minimum;
         } else if (v.minimum === null || v.minimum === undefined) {
-          v.nominal = v.maximum;
+          nominal = v.maximum;
         } else {
-          v.nominal = Math.round(((v.maximum + v.minimum) / 2) * 1e6) / 1e6;
+          nominal = Math.round(((v.maximum + v.minimum) / 2) * 1e6) / 1e6;
         }
       }
-      dimensions[k] = { nominal: v.nominal };
-    } else {
-      dimensions[k] = { nominal: v };
+      dimensions[k] = nominal;
     }
+    // If already a number, keep as-is
   }
   
+  // Remove alpha dimension (angle, not used in geometry)
   const result = {};
   for (const [k, v] of Object.entries(dimensions)) {
     if (k !== 'alpha') {
-      result[k] = v.nominal;
+      result[k] = v;
     }
   }
   return result;
 }
 
 /**
- * Convert MAS coordinates to CadQuery/Replicad coordinate system.
- * @param {number[]} coordinates - Input coordinates
- * @returns {number[]} - Converted coordinates [x, y, z]
+ * Convert MAS coordinates to Replicad/CadQuery coordinate system.
+ * 
+ * MAS uses [radial, height, depth] convention:
+ * - radial: distance from center axis (X in CAD)
+ * - height: vertical position (Z in CAD)
+ * - depth: front-to-back position (Y in CAD)
+ * 
+ * Replicad/CadQuery uses [X, Y, Z] where Z is vertical.
+ * 
+ * @param {number[]} coordinates - MAS coordinates [radial, height] or [radial, height, depth]
+ * @returns {number[]} - CAD coordinates [X, Y, Z]
  */
 export function convertAxis(coordinates) {
   if (coordinates.length === 2) {
-    return [0, coordinates[0], coordinates[1]];
+    // [radial, height] -> [X=radial, Y=0, Z=height]
+    return [coordinates[0], 0, coordinates[1]];
   } else if (coordinates.length === 3) {
+    // [radial, height, depth] -> [X=radial, Y=depth, Z=height]
     return [coordinates[0], coordinates[2], coordinates[1]];
   } else {
-    throw new Error('Invalid coordinates length');
+    throw new Error('Invalid MAS coordinates length: expected 2 or 3, got ' + coordinates.length);
   }
 }
 
 // ==========================================================================
-// Data Classes
+// Data Classes (MAS-compatible wrappers with defaults)
+// These provide defaults and normalization for MAS data structures.
+// See MAS schemas: magnetic/wire.json, magnetic/coil.json, magnetic/bobbin.json
 // ==========================================================================
 
 /**
- * Description of a wire.
+ * Wire description wrapper for MAS wire data.
+ * Normalizes wire properties and provides defaults.
+ * See: MAS schemas/magnetic/wire/*.json
  */
 export class WireDescription {
   /**
-   * @param {Object} options
-   * @param {string} options.wireType - Wire type (from WireType enum)
-   * @param {number} [options.conductingDiameter] - Conducting diameter in meters
-   * @param {number} [options.outerDiameter] - Outer diameter in meters
-   * @param {number} [options.conductingWidth] - Conducting width in meters
-   * @param {number} [options.conductingHeight] - Conducting height in meters
-   * @param {number} [options.outerWidth] - Outer width in meters
-   * @param {number} [options.outerHeight] - Outer height in meters
-   * @param {number} [options.numberConductors] - Number of conductors
+   * @param {Object} options - Wire properties matching MAS wire schema
    */
   constructor({
-    wireType = WireType.ROUND,
-    conductingDiameter = null,
-    outerDiameter = null,
-    conductingWidth = null,
-    conductingHeight = null,
-    outerWidth = null,
-    outerHeight = null,
-    numberConductors = 1
+    type = null,                 // MAS: wire.type
+    conductingDiameter = null,   // MAS: wire/round.conductingDiameter
+    outerDiameter = null,        // MAS: wire/round.outerDiameter
+    conductingWidth = null,      // MAS: wire/rectangular.conductingWidth
+    conductingHeight = null,     // MAS: wire/rectangular.conductingHeight
+    outerWidth = null,           // MAS: wire/rectangular.outerWidth
+    outerHeight = null,          // MAS: wire/rectangular.outerHeight
+    numberConductors = 1,        // MAS: wire/litz.numberConductors
+    // Legacy property name mapping
+    wireType = null
   } = {}) {
-    this.wireType = wireType;
+    // Support both 'type' (MAS) and 'wireType' (legacy), with proper fallback
+    this.type = type ?? wireType ?? WireType.ROUND;
+    this.wireType = this.type;  // Legacy alias
     this.conductingDiameter = conductingDiameter;
     this.outerDiameter = outerDiameter;
     this.conductingWidth = conductingWidth;
@@ -169,16 +227,17 @@ export class WireDescription {
   }
 
   /**
-   * Create WireDescription from MAS format dictionary.
+   * Create from MAS wire data, resolving DimensionWithTolerance values.
    * @param {Object} data - MAS format wire data
    * @returns {WireDescription}
    */
   static fromDict(data) {
-    const wireTypeStr = data.type || 'round';
-    const wireType = WireType[wireTypeStr.toUpperCase()] || WireType.ROUND;
+    if (!data || typeof data !== 'object') {
+      return new WireDescription();
+    }
     
     return new WireDescription({
-      wireType,
+      type: data.type || WireType.ROUND,
       conductingDiameter: resolveDimensionalValue(data.conductingDiameter),
       outerDiameter: resolveDimensionalValue(data.outerDiameter),
       conductingWidth: resolveDimensionalValue(data.conductingWidth),
@@ -191,92 +250,84 @@ export class WireDescription {
 }
 
 /**
- * Description of a single turn.
+ * Turn description wrapper for MAS coil turn data.
+ * See: MAS schemas/magnetic/coil.json#/$defs/turn
  */
 export class TurnDescription {
   /**
-   * @param {Object} options
-   * @param {number[]} options.coordinates - Turn coordinates [radial, height] or [x, y, z]
-   * @param {string} [options.winding] - Winding identifier
-   * @param {string} [options.section] - Section identifier
-   * @param {string} [options.layer] - Layer identifier
-   * @param {number} [options.parallel] - Parallel index
-   * @param {number} [options.turnIndex] - Turn index
-   * @param {number[]} [options.dimensions] - Wire dimensions [width, height]
-   * @param {number} [options.rotation] - Rotation angle in degrees
-   * @param {number[][]} [options.additionalCoordinates] - Additional coordinates for outer wire
-   * @param {string} [options.crossSectionalShape] - Cross-sectional shape ('round' or 'rectangular')
+   * @param {Object} options - Turn properties matching MAS turn schema
    */
   constructor({
-    coordinates = [0, 0],
-    winding = '',
-    section = '',
-    layer = '',
-    parallel = 0,
-    turnIndex = 0,
-    dimensions = null,
-    rotation = 0.0,
-    additionalCoordinates = null,
-    crossSectionalShape = 'round'
+    coordinates = [0, 0],              // MAS: turn.coordinates
+    winding = '',                      // MAS: turn.winding
+    section = '',                      // MAS: turn.section
+    layer = '',                        // MAS: turn.layer
+    parallel = 0,                      // MAS: turn.parallel
+    name = '',                         // MAS: turn.name
+    dimensions = null,                 // MAS: turn.dimensions
+    rotation = 0.0,                    // MAS: turn.rotation
+    additionalCoordinates = null,      // MAS: turn.additionalCoordinates
+    crossSectionalShape = TurnCrossSectionalShape.ROUND,  // MAS: turn.crossSectionalShape
+    // Legacy properties
+    turnIndex = 0
   } = {}) {
     this.coordinates = coordinates;
     this.winding = winding;
     this.section = section;
     this.layer = layer;
     this.parallel = parallel;
-    this.turnIndex = turnIndex;
+    this.name = name || `turn_${turnIndex}`;
     this.dimensions = dimensions;
     this.rotation = rotation;
     this.additionalCoordinates = additionalCoordinates;
     this.crossSectionalShape = crossSectionalShape;
+    this.turnIndex = turnIndex;  // Legacy
   }
 
   /**
-   * Create TurnDescription from MAS format dictionary.
+   * Create from MAS turn data.
    * @param {Object} data - MAS format turn data
    * @returns {TurnDescription}
    */
   static fromDict(data) {
+    if (!data || typeof data !== 'object') {
+      return new TurnDescription();
+    }
+    
     return new TurnDescription({
       coordinates: data.coordinates || [0, 0],
       winding: data.winding || '',
       section: data.section || '',
       layer: data.layer || '',
       parallel: data.parallel || 0,
-      turnIndex: data.turnIndex || 0,
+      name: data.name || '',
       dimensions: data.dimensions || null,
       rotation: data.rotation || 0.0,
       additionalCoordinates: data.additionalCoordinates || null,
-      crossSectionalShape: data.crossSectionalShape || 'round'
+      crossSectionalShape: data.crossSectionalShape || TurnCrossSectionalShape.ROUND
     });
   }
 }
 
 /**
- * Processed bobbin description.
+ * Bobbin processed description wrapper for MAS bobbin data.
+ * See: MAS schemas/magnetic/bobbin.json#/$defs/processedDescription
  */
 export class BobbinProcessedDescription {
   /**
-   * @param {Object} options
-   * @param {number} [options.columnDepth] - Half column depth in meters
-   * @param {number} [options.columnWidth] - Half column width in meters
-   * @param {number} [options.columnThickness] - Column wall thickness in meters
-   * @param {number} [options.wallThickness] - Top/bottom wall thickness in meters
-   * @param {string} [options.columnShape] - Column shape ('round' or 'rectangular')
-   * @param {number} [options.windingWindowHeight] - Winding window height in meters
-   * @param {number} [options.windingWindowWidth] - Winding window width in meters
-   * @param {number} [options.windingWindowRadialHeight] - Radial height for toroidal in meters
-   * @param {number} [options.windingWindowAngle] - Angle for toroidal in radians
+   * @param {Object} options - Bobbin properties matching MAS processedDescription
    */
   constructor({
-    columnDepth = 0.0,
-    columnWidth = 0.0,
-    columnThickness = 0.0,
-    wallThickness = 0.0,
-    columnShape = ColumnShape.RECTANGULAR,
-    windingWindowHeight = 0.0,
-    windingWindowWidth = 0.0,
-    windingWindowRadialHeight = 0.0,
+    columnDepth = 0.0,           // MAS: bobbin.processedDescription.columnDepth
+    columnWidth = 0.0,           // MAS: bobbin.processedDescription.columnWidth
+    columnThickness = 0.0,       // MAS: bobbin.processedDescription.columnThickness
+    wallThickness = 0.0,         // MAS: bobbin.processedDescription.wallThickness
+    columnShape = ColumnShape.RECTANGULAR,  // MAS: bobbin.processedDescription.columnShape
+    windingWindows = [],         // MAS: bobbin.processedDescription.windingWindows
+    // Legacy properties (extracted from first winding window)
+    windingWindowHeight = null,
+    windingWindowWidth = null,
+    windingWindowRadialHeight = null,
     windingWindowAngle = null
   } = {}) {
     this.columnDepth = columnDepth;
@@ -284,46 +335,40 @@ export class BobbinProcessedDescription {
     this.columnThickness = columnThickness;
     this.wallThickness = wallThickness;
     this.columnShape = columnShape;
-    this.windingWindowHeight = windingWindowHeight;
-    this.windingWindowWidth = windingWindowWidth;
-    this.windingWindowRadialHeight = windingWindowRadialHeight;
-    this.windingWindowAngle = windingWindowAngle;
+    this.windingWindows = windingWindows;
+    
+    // Extract legacy properties from first winding window if not explicitly set
+    const ww = windingWindows[0] || {};
+    this.windingWindowHeight = windingWindowHeight ?? ww.height ?? 0.0;
+    this.windingWindowWidth = windingWindowWidth ?? ww.width ?? 0.0;
+    this.windingWindowRadialHeight = windingWindowRadialHeight ?? ww.radialHeight ?? 0.0;
+    this.windingWindowAngle = windingWindowAngle ?? ww.angle ?? null;
   }
 
   /**
-   * Create BobbinProcessedDescription from MAS format dictionary.
-   * @param {Object} data - MAS format bobbin data
+   * Create from MAS bobbin processedDescription data.
+   * @param {Object} data - MAS format bobbin processedDescription
    * @returns {BobbinProcessedDescription}
    */
   static fromDict(data) {
-    const shapeStr = data.columnShape || 'rectangular';
-    const columnShape = ColumnShape[shapeStr.toUpperCase()] || ColumnShape.RECTANGULAR;
-    
-    // Get winding window info
-    let wwHeight = 0.0;
-    let wwWidth = 0.0;
-    let wwRadialHeight = 0.0;
-    let wwAngle = null;
+    if (!data || typeof data !== 'object') {
+      return new BobbinProcessedDescription();
+    }
     
     const windingWindows = data.windingWindows || [];
-    if (windingWindows.length > 0) {
-      const ww = windingWindows[0];
-      wwHeight = ww.height || 0.0;
-      wwWidth = ww.width || 0.0;
-      wwRadialHeight = ww.radialHeight || 0.0;
-      wwAngle = ww.angle ?? null;
-    }
+    const ww = windingWindows[0] || {};
     
     return new BobbinProcessedDescription({
       columnDepth: data.columnDepth || 0.0,
       columnWidth: data.columnWidth || 0.0,
       columnThickness: data.columnThickness || 0.0,
       wallThickness: data.wallThickness || 0.0,
-      columnShape,
-      windingWindowHeight: wwHeight,
-      windingWindowWidth: wwWidth,
-      windingWindowRadialHeight: wwRadialHeight,
-      windingWindowAngle: wwAngle
+      columnShape: data.columnShape || ColumnShape.RECTANGULAR,
+      windingWindows: windingWindows,
+      windingWindowHeight: ww.height || 0.0,
+      windingWindowWidth: ww.width || 0.0,
+      windingWindowRadialHeight: ww.radialHeight || 0.0,
+      windingWindowAngle: ww.angle ?? null
     });
   }
 }

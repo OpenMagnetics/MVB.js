@@ -1,0 +1,4013 @@
+{
+    "inputs": {
+        "designRequirements": {
+            "magnetizingInductance": {
+                "nominal": 0.0001
+            },
+            "name": "My Design Requirements",
+            "turnsRatios": [],
+            "wiringTechnology": "Wound"
+        },
+        "operatingPoints": [
+            {
+                "name": "Op. Point No. 1",
+                "conditions": {
+                    "ambientTemperature": 100
+                },
+                "excitationsPerWinding": [
+                    {
+                        "name": "Primary winding excitation",
+                        "frequency": 100000,
+                        "current": {
+                            "waveform": {
+                                "data": [
+                                    -5,
+                                    5,
+                                    -5
+                                ],
+                                "time": [
+                                    0,
+                                    0.000005,
+                                    0.00001
+                                ]
+                            },
+                            "processed": {
+                                "dutyCycle": 0.5,
+                                "peakToPeak": 10,
+                                "offset": 0,
+                                "label": "Triangular",
+                                "acEffectiveFrequency": 104779.34631710833,
+                                "effectiveFrequency": 104779.34631710833,
+                                "peak": 5,
+                                "rms": 2.8874560332150576,
+                                "thd": 0.11128977722602303
+                            },
+                            "harmonics": {
+                                "amplitudes": [
+                                    1.1608769501236793e-14,
+                                    4.05366124583194,
+                                    0.4511310569983995
+                                ],
+                                "frequencies": [
+                                    0,
+                                    100000,
+                                    300000
+                                ]
+                            }
+                        },
+                        "voltage": {
+                            "waveform": {
+                                "data": [
+                                    -20.5,
+                                    70.5,
+                                    70.5,
+                                    -20.5,
+                                    -20.5
+                                ],
+                                "time": [
+                                    0,
+                                    0,
+                                    0.000005,
+                                    0.000005,
+                                    0.00001
+                                ]
+                            },
+                            "processed": {
+                                "dutyCycle": 0.5,
+                                "peakToPeak": 100,
+                                "offset": 0,
+                                "label": "Rectangular",
+                                "acEffectiveFrequency": 204322.00980871,
+                                "effectiveFrequency": 190636.16661873792,
+                                "peak": 70.5,
+                                "rms": 51.572309672924284,
+                                "thd": 0.42700794276535653
+                            },
+                            "harmonics": {
+                                "amplitudes": [
+                                    24.2890625,
+                                    57.92076613061847,
+                                    19.27588907896988,
+                                    11.528257939603122,
+                                    8.194467538528329,
+                                    6.331896912839248
+                                ],
+                                "frequencies": [
+                                    0,
+                                    100000,
+                                    300000,
+                                    500000,
+                                    700000,
+                                    900000
+                                ]
+                            }
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "magnetic": {
+        "coil": {
+            "bobbin": {
+                "processedDescription": {
+                    "columnDepth": 0.00483,
+                    "columnShape": "rectangular",
+                    "columnThickness": 0,
+                    "columnWidth": 0.0026750000000000003,
+                    "coordinates": [
+                        0,
+                        0,
+                        0
+                    ],
+                    "wallThickness": 0,
+                    "windingWindows": [
+                        {
+                            "angle": 360,
+                            "area": 0.00014741138128806708,
+                            "coordinates": [
+                                0.00685,
+                                0,
+                                0
+                            ],
+                            "radialHeight": 0.00685,
+                            "sectionsAlignment": "inner or top",
+                            "sectionsOrientation": "overlapping",
+                            "shape": "round"
+                        }
+                    ]
+                }
+            },
+            "functionalDescription": [
+                {
+                    "isolationSide": "primary",
+                    "name": "Primary",
+                    "numberParallels": 1,
+                    "numberTurns": 2,
+                    "wire": {
+                        "coating": {
+                            "breakdownVoltage": 750,
+                            "grade": 1,
+                            "type": "enamelled"
+                        },
+                        "conductingArea": {
+                            "nominal": 5.822321518879598e-7
+                        },
+                        "conductingDiameter": {
+                            "nominal": 0.000861
+                        },
+                        "conductingHeight": {
+                            "nominal": 0.001
+                        },
+                        "conductingWidth": {
+                            "nominal": 0.002
+                        },
+                        "manufacturerInfo": {
+                            "name": "Nearson"
+                        },
+                        "material": "copper",
+                        "name": "Round 19.5 - Heavy Build",
+                        "numberConductors": 1,
+                        "outerDiameter": {
+                            "nominal": 0.00093
+                        },
+                        "outerHeight": {
+                            "nominal": 0.001085
+                        },
+                        "outerWidth": {
+                            "nominal": 0.002085
+                        },
+                        "standard": "IEC 60317",
+                        "standardName": "19.5 AWG",
+                        "type": "rectangular"
+                    }
+                }
+            ],
+            "groupsDescription": [
+                {
+                    "coordinateSystem": "polar",
+                    "coordinates": [
+                        0.00685,
+                        0
+                    ],
+                    "dimensions": [
+                        0.00685,
+                        360
+                    ],
+                    "name": "Default group",
+                    "partialWindings": [
+                        {
+                            "parallelsProportion": [
+                                1
+                            ],
+                            "winding": "Primary"
+                        }
+                    ],
+                    "sectionsOrientation": "overlapping",
+                    "type": "Wound"
+                }
+            ],
+            "layersDescription": [
+                {
+                    "coordinateSystem": "polar",
+                    "coordinates": [
+                        0.0010425,
+                        180
+                    ],
+                    "dimensions": [
+                        0.002085,
+                        360
+                    ],
+                    "fillingFactor": 0.05946900155134101,
+                    "name": "Primary section 0 layer 0",
+                    "orientation": "overlapping",
+                    "partialWindings": [
+                        {
+                            "parallelsProportion": [
+                                1
+                            ],
+                            "winding": "Primary"
+                        }
+                    ],
+                    "section": "Primary section 0",
+                    "turnsAlignment": "spread",
+                    "type": "conduction",
+                    "windingStyle": "windByConsecutiveTurns"
+                },
+                {
+                    "additionalCoordinates": [
+                        [
+                            -0.007435000000000001,
+                            180
+                        ]
+                    ],
+                    "coordinateSystem": "polar",
+                    "coordinates": [
+                        0.002085,
+                        180
+                    ],
+                    "dimensions": [
+                        0,
+                        360
+                    ],
+                    "fillingFactor": 1,
+                    "name": "Insulation between Primary and Primary section 1 insulation layer 0",
+                    "orientation": "overlapping",
+                    "partialWindings": [],
+                    "section": "Insulation between Primary and Primary section 1",
+                    "turnsAlignment": "spread",
+                    "type": "insulation"
+                }
+            ],
+            "sectionsDescription": [
+                {
+                    "coordinateSystem": "polar",
+                    "coordinates": [
+                        0.0010425,
+                        180
+                    ],
+                    "dimensions": [
+                        0.002085,
+                        360
+                    ],
+                    "fillingFactor": 0.05946900155134101,
+                    "group": "Default group",
+                    "layersOrientation": "overlapping",
+                    "margin": [
+                        0,
+                        0
+                    ],
+                    "name": "Primary section 0",
+                    "partialWindings": [
+                        {
+                            "parallelsProportion": [
+                                1
+                            ],
+                            "winding": "Primary"
+                        }
+                    ],
+                    "type": "conduction",
+                    "windingStyle": "windByConsecutiveTurns"
+                },
+                {
+                    "coordinateSystem": "polar",
+                    "coordinates": [
+                        0.002085,
+                        180
+                    ],
+                    "dimensions": [
+                        0,
+                        360
+                    ],
+                    "fillingFactor": 1,
+                    "group": "Default group",
+                    "layersOrientation": "overlapping",
+                    "name": "Insulation between Primary and Primary section 1",
+                    "partialWindings": [],
+                    "type": "insulation"
+                }
+            ],
+            "turnsDescription": [
+                {
+                    "additionalCoordinates": [
+                        [
+                            8.108692618854413e-19,
+                            0.0132425
+                        ]
+                    ],
+                    "coordinateSystem": "cartesian",
+                    "coordinates": [
+                        3.556068143024127e-19,
+                        0.0058075
+                    ],
+                    "crossSectionalShape": "rectangular",
+                    "dimensions": [
+                        0.002085,
+                        0.001085
+                    ],
+                    "layer": "Primary section 0 layer 0",
+                    "length": 0.036570220682734716,
+                    "name": "Primary parallel 0 turn 0",
+                    "orientation": "clockwise",
+                    "parallel": 0,
+                    "rotation": 90,
+                    "section": "Primary section 0",
+                    "winding": "Primary"
+                },
+                {
+                    "additionalCoordinates": [
+                        [
+                            -2.4326077856563235e-18,
+                            -0.0132425
+                        ]
+                    ],
+                    "coordinateSystem": "cartesian",
+                    "coordinates": [
+                        -1.066820442907238e-18,
+                        -0.0058075
+                    ],
+                    "crossSectionalShape": "rectangular",
+                    "dimensions": [
+                        0.002085,
+                        0.001085
+                    ],
+                    "layer": "Primary section 0 layer 0",
+                    "length": 0.036570220682734716,
+                    "name": "Primary parallel 0 turn 1",
+                    "orientation": "clockwise",
+                    "parallel": 0,
+                    "rotation": 270,
+                    "section": "Primary section 0",
+                    "winding": "Primary"
+                }
+            ]
+        },
+        "core": {
+            "functionalDescription": {
+                "gapping": [],
+                "material": {
+                    "alternatives": [
+                        "P42",
+                        "P48",
+                        "P45",
+                        "P41",
+                        "97",
+                        "JNP44",
+                        "N95",
+                        "DMR96",
+                        "JNP95",
+                        "PC47"
+                    ],
+                    "coerciveForce": [
+                        {
+                            "magneticField": 6,
+                            "magneticFluxDensity": 0,
+                            "temperature": 100
+                        },
+                        {
+                            "magneticField": 14,
+                            "magneticFluxDensity": 0,
+                            "temperature": 25
+                        }
+                    ],
+                    "curieTemperature": 215,
+                    "density": 4800,
+                    "family": "MnZn",
+                    "manufacturerInfo": {
+                        "datasheetUrl": "https://fair-rite.com/98-material-data-sheet/",
+                        "name": "Fair-Rite"
+                    },
+                    "material": "ferrite",
+                    "materialComposition": "MnZn",
+                    "name": "98",
+                    "permeability": {
+                        "complex": {
+                            "imaginary": [
+                                {
+                                    "frequency": 10000,
+                                    "value": 0.45
+                                },
+                                {
+                                    "frequency": 50000,
+                                    "value": 0.45
+                                },
+                                {
+                                    "frequency": 100000,
+                                    "value": 0.45
+                                },
+                                {
+                                    "frequency": 300000,
+                                    "value": 0.46
+                                },
+                                {
+                                    "frequency": 500000,
+                                    "value": 0.48
+                                },
+                                {
+                                    "frequency": 700000,
+                                    "value": 0.58
+                                },
+                                {
+                                    "frequency": 1000000,
+                                    "value": 0.62
+                                },
+                                {
+                                    "frequency": 1080000,
+                                    "value": 0.62
+                                },
+                                {
+                                    "frequency": 1160000,
+                                    "value": 0.62
+                                },
+                                {
+                                    "frequency": 1240000,
+                                    "value": 0.63
+                                },
+                                {
+                                    "frequency": 1320000,
+                                    "value": 0.65
+                                },
+                                {
+                                    "frequency": 1420000,
+                                    "value": 0.66
+                                },
+                                {
+                                    "frequency": 1530000,
+                                    "value": 0.7000000000000001
+                                },
+                                {
+                                    "frequency": 1640000,
+                                    "value": 0.72
+                                },
+                                {
+                                    "frequency": 1750000,
+                                    "value": 0.75
+                                },
+                                {
+                                    "frequency": 1870000,
+                                    "value": 0.75
+                                },
+                                {
+                                    "frequency": 2020000,
+                                    "value": 0.76
+                                },
+                                {
+                                    "frequency": 2160000,
+                                    "value": 0.76
+                                },
+                                {
+                                    "frequency": 2310000,
+                                    "value": 0.74
+                                },
+                                {
+                                    "frequency": 2480000,
+                                    "value": 0.77
+                                },
+                                {
+                                    "frequency": 2670000,
+                                    "value": 0.76
+                                },
+                                {
+                                    "frequency": 2860000,
+                                    "value": 0.77
+                                },
+                                {
+                                    "frequency": 3050000,
+                                    "value": 0.78
+                                },
+                                {
+                                    "frequency": 3270000,
+                                    "value": 0.78
+                                },
+                                {
+                                    "frequency": 3530000,
+                                    "value": 0.8
+                                },
+                                {
+                                    "frequency": 3780000,
+                                    "value": 0.81
+                                },
+                                {
+                                    "frequency": 4040000,
+                                    "value": 0.84
+                                },
+                                {
+                                    "frequency": 4330000,
+                                    "value": 0.86
+                                },
+                                {
+                                    "frequency": 4660000,
+                                    "value": 0.87
+                                },
+                                {
+                                    "frequency": 5000000,
+                                    "value": 0.93
+                                },
+                                {
+                                    "frequency": 5340000,
+                                    "value": 0.9500000000000001
+                                },
+                                {
+                                    "frequency": 5720000,
+                                    "value": 0.98
+                                },
+                                {
+                                    "frequency": 6170000,
+                                    "value": 1.07
+                                },
+                                {
+                                    "frequency": 6610000,
+                                    "value": 1.11
+                                },
+                                {
+                                    "frequency": 7050000,
+                                    "value": 1.17
+                                },
+                                {
+                                    "frequency": 7560000,
+                                    "value": 1.31
+                                },
+                                {
+                                    "frequency": 8170000,
+                                    "value": 1.42
+                                },
+                                {
+                                    "frequency": 8780000,
+                                    "value": 1.56
+                                },
+                                {
+                                    "frequency": 9390000,
+                                    "value": 1.78
+                                },
+                                {
+                                    "frequency": 10000000,
+                                    "value": 2.02
+                                },
+                                {
+                                    "frequency": 10700000,
+                                    "value": 2.35
+                                },
+                                {
+                                    "frequency": 11600000,
+                                    "value": 2.88
+                                },
+                                {
+                                    "frequency": 12400000,
+                                    "value": 3.54
+                                },
+                                {
+                                    "frequency": 13200000,
+                                    "value": 4.43
+                                },
+                                {
+                                    "frequency": 14200000,
+                                    "value": 5.91
+                                },
+                                {
+                                    "frequency": 15300000,
+                                    "value": 8.31
+                                },
+                                {
+                                    "frequency": 16400000,
+                                    "value": 11.73
+                                },
+                                {
+                                    "frequency": 17500000,
+                                    "value": 16.41
+                                },
+                                {
+                                    "frequency": 18700000,
+                                    "value": 23.49
+                                },
+                                {
+                                    "frequency": 20200000,
+                                    "value": 33.55
+                                },
+                                {
+                                    "frequency": 21600000,
+                                    "value": 44.49
+                                },
+                                {
+                                    "frequency": 23100000,
+                                    "value": 54.68
+                                },
+                                {
+                                    "frequency": 24800000,
+                                    "value": 64.11
+                                },
+                                {
+                                    "frequency": 26700000,
+                                    "value": 71.61
+                                },
+                                {
+                                    "frequency": 28600000,
+                                    "value": 76.41
+                                },
+                                {
+                                    "frequency": 30500000,
+                                    "value": 78.94
+                                },
+                                {
+                                    "frequency": 32700000,
+                                    "value": 80.56
+                                },
+                                {
+                                    "frequency": 35300000,
+                                    "value": 80.98
+                                },
+                                {
+                                    "frequency": 37800000,
+                                    "value": 80.56
+                                },
+                                {
+                                    "frequency": 40400000,
+                                    "value": 79.37
+                                },
+                                {
+                                    "frequency": 43300000,
+                                    "value": 77.69
+                                },
+                                {
+                                    "frequency": 46600000,
+                                    "value": 75.44
+                                },
+                                {
+                                    "frequency": 50000000,
+                                    "value": 73.15
+                                },
+                                {
+                                    "frequency": 53400000,
+                                    "value": 70.95
+                                },
+                                {
+                                    "frequency": 57200000,
+                                    "value": 68.5
+                                },
+                                {
+                                    "frequency": 61700000,
+                                    "value": 65.97
+                                },
+                                {
+                                    "frequency": 66100000,
+                                    "value": 63.62
+                                },
+                                {
+                                    "frequency": 70500000,
+                                    "value": 61.47
+                                },
+                                {
+                                    "frequency": 75600000,
+                                    "value": 59.3
+                                },
+                                {
+                                    "frequency": 81700000,
+                                    "value": 56.95
+                                },
+                                {
+                                    "frequency": 87800000,
+                                    "value": 54.88
+                                },
+                                {
+                                    "frequency": 93900000,
+                                    "value": 53.08
+                                },
+                                {
+                                    "frequency": 100000000,
+                                    "value": 51.43
+                                },
+                                {
+                                    "frequency": 107000000,
+                                    "value": 49.72
+                                },
+                                {
+                                    "frequency": 116000000,
+                                    "value": 47.92
+                                },
+                                {
+                                    "frequency": 124000000,
+                                    "value": 46.32
+                                },
+                                {
+                                    "frequency": 132000000,
+                                    "value": 44.89
+                                },
+                                {
+                                    "frequency": 142000000,
+                                    "value": 43.33
+                                },
+                                {
+                                    "frequency": 153000000,
+                                    "value": 41.76
+                                },
+                                {
+                                    "frequency": 164000000,
+                                    "value": 40.3
+                                },
+                                {
+                                    "frequency": 175000000,
+                                    "value": 38.91
+                                },
+                                {
+                                    "frequency": 187000000,
+                                    "value": 37.48
+                                },
+                                {
+                                    "frequency": 202000000,
+                                    "value": 35.95
+                                },
+                                {
+                                    "frequency": 216000000,
+                                    "value": 34.55
+                                },
+                                {
+                                    "frequency": 231000000,
+                                    "value": 33.22
+                                },
+                                {
+                                    "frequency": 248000000,
+                                    "value": 31.81
+                                },
+                                {
+                                    "frequency": 267000000,
+                                    "value": 30.3
+                                },
+                                {
+                                    "frequency": 286000000,
+                                    "value": 28.89
+                                },
+                                {
+                                    "frequency": 305000000,
+                                    "value": 27.62
+                                },
+                                {
+                                    "frequency": 327000000,
+                                    "value": 26.28
+                                },
+                                {
+                                    "frequency": 353000000,
+                                    "value": 24.89
+                                },
+                                {
+                                    "frequency": 378000000,
+                                    "value": 23.63
+                                },
+                                {
+                                    "frequency": 404000000,
+                                    "value": 22.49
+                                },
+                                {
+                                    "frequency": 433000000,
+                                    "value": 21.36
+                                },
+                                {
+                                    "frequency": 466000000,
+                                    "value": 20.25
+                                },
+                                {
+                                    "frequency": 500000000,
+                                    "value": 19.17
+                                },
+                                {
+                                    "frequency": 534000000,
+                                    "value": 18.27
+                                },
+                                {
+                                    "frequency": 572000000,
+                                    "value": 17.33
+                                },
+                                {
+                                    "frequency": 617000000,
+                                    "value": 16.4
+                                },
+                                {
+                                    "frequency": 661000000,
+                                    "value": 15.59
+                                },
+                                {
+                                    "frequency": 705000000,
+                                    "value": 14.87
+                                },
+                                {
+                                    "frequency": 756000000,
+                                    "value": 14.13
+                                },
+                                {
+                                    "frequency": 817000000,
+                                    "value": 13.41
+                                },
+                                {
+                                    "frequency": 878000000,
+                                    "value": 12.79
+                                },
+                                {
+                                    "frequency": 939000000,
+                                    "value": 12.3
+                                },
+                                {
+                                    "frequency": 1000000000,
+                                    "value": 11.9
+                                }
+                            ],
+                            "real": [
+                                {
+                                    "frequency": 10000,
+                                    "value": 118.03
+                                },
+                                {
+                                    "frequency": 50000,
+                                    "value": 117.55
+                                },
+                                {
+                                    "frequency": 100000,
+                                    "value": 117.59
+                                },
+                                {
+                                    "frequency": 300000,
+                                    "value": 117.89
+                                },
+                                {
+                                    "frequency": 500000,
+                                    "value": 117.95
+                                },
+                                {
+                                    "frequency": 700000,
+                                    "value": 117.85
+                                },
+                                {
+                                    "frequency": 1000000,
+                                    "value": 118.57
+                                },
+                                {
+                                    "frequency": 1080000,
+                                    "value": 118.5
+                                },
+                                {
+                                    "frequency": 1160000,
+                                    "value": 118.51
+                                },
+                                {
+                                    "frequency": 1240000,
+                                    "value": 118.53
+                                },
+                                {
+                                    "frequency": 1320000,
+                                    "value": 118.52
+                                },
+                                {
+                                    "frequency": 1420000,
+                                    "value": 118.49
+                                },
+                                {
+                                    "frequency": 1530000,
+                                    "value": 118.47
+                                },
+                                {
+                                    "frequency": 1640000,
+                                    "value": 118.5
+                                },
+                                {
+                                    "frequency": 1750000,
+                                    "value": 118.53
+                                },
+                                {
+                                    "frequency": 1870000,
+                                    "value": 118.53
+                                },
+                                {
+                                    "frequency": 2020000,
+                                    "value": 118.54
+                                },
+                                {
+                                    "frequency": 2160000,
+                                    "value": 118.54
+                                },
+                                {
+                                    "frequency": 2310000,
+                                    "value": 118.59
+                                },
+                                {
+                                    "frequency": 2480000,
+                                    "value": 118.58
+                                },
+                                {
+                                    "frequency": 2670000,
+                                    "value": 118.65
+                                },
+                                {
+                                    "frequency": 2860000,
+                                    "value": 118.71
+                                },
+                                {
+                                    "frequency": 3050000,
+                                    "value": 118.76
+                                },
+                                {
+                                    "frequency": 3270000,
+                                    "value": 118.84
+                                },
+                                {
+                                    "frequency": 3530000,
+                                    "value": 118.94
+                                },
+                                {
+                                    "frequency": 3780000,
+                                    "value": 119.04
+                                },
+                                {
+                                    "frequency": 4040000,
+                                    "value": 119.15
+                                },
+                                {
+                                    "frequency": 4330000,
+                                    "value": 119.29
+                                },
+                                {
+                                    "frequency": 4660000,
+                                    "value": 119.47
+                                },
+                                {
+                                    "frequency": 5000000,
+                                    "value": 119.69
+                                },
+                                {
+                                    "frequency": 5340000,
+                                    "value": 119.92
+                                },
+                                {
+                                    "frequency": 5720000,
+                                    "value": 120.19
+                                },
+                                {
+                                    "frequency": 6170000,
+                                    "value": 120.57
+                                },
+                                {
+                                    "frequency": 6610000,
+                                    "value": 120.98
+                                },
+                                {
+                                    "frequency": 7050000,
+                                    "value": 121.42
+                                },
+                                {
+                                    "frequency": 7560000,
+                                    "value": 121.97
+                                },
+                                {
+                                    "frequency": 8170000,
+                                    "value": 122.72
+                                },
+                                {
+                                    "frequency": 8780000,
+                                    "value": 123.54
+                                },
+                                {
+                                    "frequency": 9390000,
+                                    "value": 124.47
+                                },
+                                {
+                                    "frequency": 10000000,
+                                    "value": 125.48
+                                },
+                                {
+                                    "frequency": 10700000,
+                                    "value": 126.84
+                                },
+                                {
+                                    "frequency": 11600000,
+                                    "value": 128.58
+                                },
+                                {
+                                    "frequency": 12400000,
+                                    "value": 130.59
+                                },
+                                {
+                                    "frequency": 13200000,
+                                    "value": 132.86
+                                },
+                                {
+                                    "frequency": 14200000,
+                                    "value": 135.72
+                                },
+                                {
+                                    "frequency": 15300000,
+                                    "value": 139.39
+                                },
+                                {
+                                    "frequency": 16400000,
+                                    "value": 143.28
+                                },
+                                {
+                                    "frequency": 17500000,
+                                    "value": 147.07
+                                },
+                                {
+                                    "frequency": 18700000,
+                                    "value": 150.66
+                                },
+                                {
+                                    "frequency": 20200000,
+                                    "value": 152.75
+                                },
+                                {
+                                    "frequency": 21600000,
+                                    "value": 151.8
+                                },
+                                {
+                                    "frequency": 23100000,
+                                    "value": 147.86
+                                },
+                                {
+                                    "frequency": 24800000,
+                                    "value": 140.88
+                                },
+                                {
+                                    "frequency": 26700000,
+                                    "value": 131.6
+                                },
+                                {
+                                    "frequency": 28600000,
+                                    "value": 122.17
+                                },
+                                {
+                                    "frequency": 30500000,
+                                    "value": 113.86
+                                },
+                                {
+                                    "frequency": 32700000,
+                                    "value": 105.12
+                                },
+                                {
+                                    "frequency": 35300000,
+                                    "value": 96.33
+                                },
+                                {
+                                    "frequency": 37800000,
+                                    "value": 88.56
+                                },
+                                {
+                                    "frequency": 40400000,
+                                    "value": 82.07
+                                },
+                                {
+                                    "frequency": 43300000,
+                                    "value": 75.64
+                                },
+                                {
+                                    "frequency": 46600000,
+                                    "value": 69.45
+                                },
+                                {
+                                    "frequency": 50000000,
+                                    "value": 64.33
+                                },
+                                {
+                                    "frequency": 53400000,
+                                    "value": 60.03
+                                },
+                                {
+                                    "frequency": 57200000,
+                                    "value": 55.88
+                                },
+                                {
+                                    "frequency": 61700000,
+                                    "value": 51.86
+                                },
+                                {
+                                    "frequency": 66100000,
+                                    "value": 48.4
+                                },
+                                {
+                                    "frequency": 70500000,
+                                    "value": 45.5
+                                },
+                                {
+                                    "frequency": 75600000,
+                                    "value": 42.6
+                                },
+                                {
+                                    "frequency": 81700000,
+                                    "value": 39.66
+                                },
+                                {
+                                    "frequency": 87800000,
+                                    "value": 37.13
+                                },
+                                {
+                                    "frequency": 93900000,
+                                    "value": 34.87
+                                },
+                                {
+                                    "frequency": 100000000,
+                                    "value": 32.9
+                                },
+                                {
+                                    "frequency": 107000000,
+                                    "value": 30.8
+                                },
+                                {
+                                    "frequency": 116000000,
+                                    "value": 28.6
+                                },
+                                {
+                                    "frequency": 124000000,
+                                    "value": 26.66
+                                },
+                                {
+                                    "frequency": 132000000,
+                                    "value": 24.92
+                                },
+                                {
+                                    "frequency": 142000000,
+                                    "value": 23.03
+                                },
+                                {
+                                    "frequency": 153000000,
+                                    "value": 21.2
+                                },
+                                {
+                                    "frequency": 164000000,
+                                    "value": 19.46
+                                },
+                                {
+                                    "frequency": 175000000,
+                                    "value": 17.9
+                                },
+                                {
+                                    "frequency": 187000000,
+                                    "value": 16.32
+                                },
+                                {
+                                    "frequency": 202000000,
+                                    "value": 14.68
+                                },
+                                {
+                                    "frequency": 216000000,
+                                    "value": 13.23
+                                },
+                                {
+                                    "frequency": 231000000,
+                                    "value": 11.97
+                                },
+                                {
+                                    "frequency": 248000000,
+                                    "value": 10.62
+                                },
+                                {
+                                    "frequency": 267000000,
+                                    "value": 9.32
+                                },
+                                {
+                                    "frequency": 286000000,
+                                    "value": 8.16
+                                },
+                                {
+                                    "frequency": 305000000,
+                                    "value": 7.2
+                                },
+                                {
+                                    "frequency": 327000000,
+                                    "value": 6.24
+                                },
+                                {
+                                    "frequency": 353000000,
+                                    "value": 5.3
+                                },
+                                {
+                                    "frequency": 378000000,
+                                    "value": 4.54
+                                },
+                                {
+                                    "frequency": 404000000,
+                                    "value": 3.87
+                                },
+                                {
+                                    "frequency": 433000000,
+                                    "value": 3.21
+                                },
+                                {
+                                    "frequency": 466000000,
+                                    "value": 2.5700000000000003
+                                },
+                                {
+                                    "frequency": 500000000,
+                                    "value": 2.05
+                                },
+                                {
+                                    "frequency": 534000000,
+                                    "value": 1.63
+                                },
+                                {
+                                    "frequency": 572000000,
+                                    "value": 1.15
+                                },
+                                {
+                                    "frequency": 617000000,
+                                    "value": 0.74
+                                },
+                                {
+                                    "frequency": 661000000,
+                                    "value": 0.37
+                                },
+                                {
+                                    "frequency": 705000000,
+                                    "value": 0.05
+                                },
+                                {
+                                    "frequency": 756000000,
+                                    "value": -0.22
+                                },
+                                {
+                                    "frequency": 817000000,
+                                    "value": -0.49
+                                },
+                                {
+                                    "frequency": 878000000,
+                                    "value": -0.6900000000000001
+                                },
+                                {
+                                    "frequency": 939000000,
+                                    "value": -0.87
+                                },
+                                {
+                                    "frequency": 1000000000,
+                                    "value": -1.05
+                                }
+                            ]
+                        },
+                        "initial": [
+                            {
+                                "frequency": 10000,
+                                "temperature": -50,
+                                "value": 1252.36
+                            },
+                            {
+                                "frequency": 10000,
+                                "temperature": -40,
+                                "value": 1362.4
+                            },
+                            {
+                                "frequency": 10000,
+                                "temperature": -30,
+                                "value": 1476.29
+                            },
+                            {
+                                "frequency": 10000,
+                                "temperature": -20,
+                                "value": 1599.65
+                            },
+                            {
+                                "frequency": 10000,
+                                "temperature": -10,
+                                "value": 1729.18
+                            },
+                            {
+                                "frequency": 10000,
+                                "temperature": 0,
+                                "value": 1865.7
+                            },
+                            {
+                                "frequency": 10000,
+                                "temperature": 10,
+                                "value": 2049.35
+                            },
+                            {
+                                "frequency": 10000,
+                                "temperature": 20,
+                                "value": 2258.05
+                            },
+                            {
+                                "frequency": 10000,
+                                "temperature": 30,
+                                "value": 2502.15
+                            },
+                            {
+                                "frequency": 10000,
+                                "temperature": 40,
+                                "value": 2791.06
+                            },
+                            {
+                                "frequency": 10000,
+                                "temperature": 50,
+                                "value": 3129.86
+                            },
+                            {
+                                "frequency": 10000,
+                                "temperature": 60,
+                                "value": 3518.27
+                            },
+                            {
+                                "frequency": 10000,
+                                "temperature": 70,
+                                "value": 3953.38
+                            },
+                            {
+                                "frequency": 10000,
+                                "temperature": 80,
+                                "value": 4408.69
+                            },
+                            {
+                                "frequency": 10000,
+                                "temperature": 90,
+                                "value": 4845.83
+                            },
+                            {
+                                "frequency": 10000,
+                                "temperature": 100,
+                                "value": 5186.19
+                            },
+                            {
+                                "frequency": 10000,
+                                "temperature": 110,
+                                "value": 5233.29
+                            },
+                            {
+                                "frequency": 10000,
+                                "temperature": 120,
+                                "value": 5001.23
+                            },
+                            {
+                                "frequency": 10000,
+                                "temperature": 130,
+                                "value": 4769.11
+                            },
+                            {
+                                "frequency": 10000,
+                                "temperature": 140,
+                                "value": 4614.62
+                            },
+                            {
+                                "frequency": 10000,
+                                "temperature": 150,
+                                "value": 4531.19
+                            },
+                            {
+                                "frequency": 10000,
+                                "temperature": 160,
+                                "value": 4511.42
+                            },
+                            {
+                                "frequency": 10000,
+                                "temperature": 170,
+                                "value": 4553.24
+                            },
+                            {
+                                "frequency": 10000,
+                                "temperature": 180,
+                                "value": 4645.86
+                            },
+                            {
+                                "frequency": 10000,
+                                "temperature": 190,
+                                "value": 4799.88
+                            },
+                            {
+                                "frequency": 10000,
+                                "temperature": 205,
+                                "value": 5521.31
+                            },
+                            {
+                                "frequency": 10000,
+                                "temperature": 210,
+                                "value": 5704.37
+                            },
+                            {
+                                "frequency": 10000,
+                                "temperature": 215,
+                                "value": 5883.45
+                            },
+                            {
+                                "frequency": 10000,
+                                "temperature": 220,
+                                "value": 6005.49
+                            },
+                            {
+                                "frequency": 10000,
+                                "temperature": 225,
+                                "value": 5922.52
+                            },
+                            {
+                                "frequency": 10000,
+                                "temperature": 230,
+                                "value": 5043.76
+                            },
+                            {
+                                "frequency": 10000,
+                                "temperature": 235,
+                                "value": 93.64
+                            }
+                        ]
+                    },
+                    "remanence": [
+                        {
+                            "magneticField": 0,
+                            "magneticFluxDensity": 0.05,
+                            "temperature": 100
+                        },
+                        {
+                            "magneticField": 0,
+                            "magneticFluxDensity": 0.2,
+                            "temperature": 25
+                        }
+                    ],
+                    "resistivity": [
+                        {
+                            "temperature": 25,
+                            "value": 2
+                        }
+                    ],
+                    "saturation": [
+                        {
+                            "magneticField": 397,
+                            "magneticFluxDensity": 0.405,
+                            "temperature": 100
+                        },
+                        {
+                            "magneticField": 397,
+                            "magneticFluxDensity": 0.501,
+                            "temperature": 25
+                        }
+                    ],
+                    "type": "commercial",
+                    "volumetricLosses": {
+                        "default": [
+                            {
+                                "method": "roshen"
+                            },
+                            {
+                                "method": "steinmetz",
+                                "ranges": [
+                                    {
+                                        "alpha": 1.5950612180000001,
+                                        "beta": 2.636535052,
+                                        "ct0": 0.2309448429,
+                                        "ct1": 0.002908141711,
+                                        "ct2": 0.000015679426190000002,
+                                        "k": 3.928142411,
+                                        "maximumFrequency": 62500,
+                                        "minimumFrequency": 25000
+                                    },
+                                    {
+                                        "alpha": 1.475426256,
+                                        "beta": 2.740567552,
+                                        "ct0": 0.3313087837,
+                                        "ct1": 0.003684861713,
+                                        "ct2": 0.00002029839064,
+                                        "k": 7.145271691,
+                                        "maximumFrequency": 150000,
+                                        "minimumFrequency": 62500
+                                    },
+                                    {
+                                        "alpha": 1.497570589,
+                                        "beta": 2.572303501,
+                                        "ct0": 0.2778413577,
+                                        "ct1": 0.003564714953999,
+                                        "ct2": 0.000018940925110000003,
+                                        "k": 6.838681162,
+                                        "maximumFrequency": 200000,
+                                        "minimumFrequency": 150000
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                },
+                "numberStacks": 1,
+                "shape": {
+                    "aliases": [
+                        "R 24/14/9.7"
+                    ],
+                    "dimensions": {
+                        "A": {
+                            "nominal": 0.0244
+                        },
+                        "B": {
+                            "nominal": 0.0137
+                        },
+                        "C": {
+                            "nominal": 0.00966
+                        }
+                    },
+                    "family": "t",
+                    "magneticCircuit": "closed",
+                    "name": "T 24/14/9.7",
+                    "type": "standard"
+                },
+                "type": "toroidal"
+            },
+            "geometricalDescription": [
+                {
+                    "coordinates": [
+                        0,
+                        0,
+                        0
+                    ],
+                    "material": "98",
+                    "rotation": [
+                        1.5707963267948966,
+                        1.5707963267948966,
+                        0
+                    ],
+                    "shape": {
+                        "aliases": [
+                            "R 24/14/9.7"
+                        ],
+                        "dimensions": {
+                            "A": {
+                                "nominal": 0.0244
+                            },
+                            "B": {
+                                "nominal": 0.0137
+                            },
+                            "C": {
+                                "nominal": 0.00966
+                            }
+                        },
+                        "family": "t",
+                        "magneticCircuit": "closed",
+                        "name": "T 24/14/9.7",
+                        "type": "standard"
+                    },
+                    "type": "toroidal"
+                }
+            ],
+            "name": "Custom",
+            "processedDescription": {
+                "columns": [
+                    {
+                        "area": 0.000051681,
+                        "coordinates": [
+                            0,
+                            0,
+                            0
+                        ],
+                        "depth": 0.00966,
+                        "height": 0.05984734005088556,
+                        "shape": "rectangular",
+                        "type": "central",
+                        "width": 0.005350000000000001
+                    }
+                ],
+                "depth": 0.00966,
+                "effectiveParameters": {
+                    "effectiveArea": 0.000051681000000000016,
+                    "effectiveLength": 0.059847340050885565,
+                    "effectiveVolume": 0.000003092970381169818,
+                    "minimumArea": 0.00005168100000000001
+                },
+                "height": 0.0244,
+                "width": 0.0244,
+                "windingWindows": [
+                    {
+                        "angle": 360,
+                        "area": 0.00014741138128806708,
+                        "coordinates": [
+                            0.005350000000000001,
+                            0
+                        ],
+                        "radialHeight": 0.00685
+                    }
+                ]
+            }
+        }
+    },
+    "outputs": [
+        {
+            "coreLosses": {
+                "coreLosses": 88.12894506579538,
+                "magneticFluxDensity": {
+                    "harmonics": {
+                        "amplitudes": [
+                            2.4037188727678575e-15,
+                            0.8393535627850818,
+                            3.700938248565636e-16,
+                            0.09341147101622048,
+                            2.018644844014792e-16,
+                            0.03373641655029585,
+                            8.357292527681325e-17,
+                            0.017295731030299657,
+                            7.246768248477107e-17,
+                            0.010530472679668099,
+                            6.520165457990469e-17,
+                            0.007106405059521275,
+                            6.506817230123774e-17,
+                            0.005137585464149742,
+                            4.897677457283994e-17,
+                            0.00390288561224013,
+                            6.06822671261281e-17,
+                            0.003078294082422728,
+                            3.7198144147518665e-17,
+                            0.0025007083513667204,
+                            3.3642757302889334e-17,
+                            0.002080765251576556,
+                            3.173156019875543e-17,
+                            0.001766175424247503,
+                            2.1862659407008646e-17,
+                            0.001524691080194143,
+                            1.555702208925884e-17,
+                            0.001335550402880997,
+                            1.2157385902078721e-17,
+                            0.0011848989040991837,
+                            1.92457280292356e-17,
+                            0.0010632072319170407,
+                            2.474002198497129e-17,
+                            0.0009637491941282779,
+                            1.7066502479176612e-17,
+                            0.0008816702339747559,
+                            1.9684694268148346e-17,
+                            0.0008133984290865638,
+                            3.6319149435366813e-17,
+                            0.0007562613502926628,
+                            1.9927086405002492e-17,
+                            0.0007082305477189087,
+                            2.9161320482128716e-17,
+                            0.000667747370247118,
+                            3.054005864264021e-17,
+                            0.0006336019091269723,
+                            2.163491532712875e-17,
+                            0.0006048474226930658,
+                            1.5685850226244332e-18,
+                            0.0005807389483796525,
+                            1.536288379136655e-17,
+                            0.0005606887216629789,
+                            8.12659405101835e-18,
+                            0.0005442334904444431,
+                            4.697020626375035e-18,
+                            0.0005310104050323958,
+                            1.8629403646420172e-17,
+                            0.0005207392115633555,
+                            1.4765645574583532e-17,
+                            0.0005132091808591091,
+                            1.9369313756373948e-17,
+                            0.0005082696888154605,
+                            2.5858949662585672e-17,
+                            0.000505823706261982
+                        ],
+                        "frequencies": [
+                            0,
+                            100000,
+                            200000,
+                            300000,
+                            400000,
+                            500000,
+                            600000,
+                            700000,
+                            800000,
+                            900000,
+                            1000000,
+                            1100000,
+                            1200000,
+                            1300000,
+                            1400000,
+                            1500000,
+                            1600000,
+                            1700000,
+                            1800000,
+                            1900000,
+                            2000000,
+                            2100000,
+                            2200000,
+                            2300000,
+                            2400000,
+                            2500000,
+                            2600000,
+                            2700000,
+                            2800000,
+                            2900000,
+                            3000000,
+                            3100000,
+                            3200000,
+                            3300000,
+                            3400000,
+                            3500000,
+                            3600000,
+                            3700000,
+                            3800000,
+                            3900000,
+                            4000000,
+                            4100000,
+                            4200000,
+                            4300000,
+                            4400000,
+                            4500000,
+                            4600000,
+                            4700000,
+                            4800000,
+                            4900000,
+                            5000000,
+                            5100000,
+                            5200000,
+                            5300000,
+                            5400000,
+                            5500000,
+                            5600000,
+                            5700000,
+                            5800000,
+                            5900000,
+                            6000000,
+                            6100000,
+                            6200000,
+                            6300000
+                        ]
+                    },
+                    "processed": {
+                        "dutyCycle": 0.4999999999999997,
+                        "label": "Triangular",
+                        "negativePeak": -1.0353030407364736,
+                        "offset": -1.6653345369377348e-15,
+                        "peak": 1.0353030407364736,
+                        "peakToPeak": 2.0706060814729437,
+                        "positivePeak": 1.0353030407364703
+                    },
+                    "waveform": {
+                        "data": [
+                            -1.0353030407364736,
+                            1.0353030407364703,
+                            -1.0353030407364736
+                        ],
+                        "time": [
+                            0,
+                            0.000005000000000000008,
+                            0.000010000000000000021
+                        ]
+                    }
+                },
+                "methodUsed": "Steinmetz",
+                "origin": "simulation",
+                "temperature": 2638.583950878074,
+                "volumetricLosses": 28493303.913393244
+            },
+            "inductance": {
+                "magnetizingInductance": {
+                    "coreReluctance": 186896.6865798963,
+                    "gappingReluctance": 0,
+                    "magnetizingInductance": {
+                        "nominal": 0.000021402198579320684
+                    },
+                    "maximumFringingFactor": 1,
+                    "maximumStorableMagneticEnergyGapping": 0,
+                    "methodUsed": "Default",
+                    "origin": "simulation",
+                    "reluctancePerGap": [],
+                    "ungappedCoreReluctance": 186896.6865798963
+                }
+            },
+            "windingLosses": {
+                "currentDividerPerTurn": [
+                    1.0000000000000002,
+                    1.0000000000000002
+                ],
+                "currentPerWinding": {
+                    "conditions": {
+                        "ambientTemperature": 100
+                    },
+                    "excitationsPerWinding": [
+                        {
+                            "current": {
+                                "harmonics": {
+                                    "amplitudes": [
+                                        1.1608769501236793e-14,
+                                        4.05366124583194,
+                                        1.787369544444173e-15,
+                                        0.4511310569983995,
+                                        9.749053004706756e-16,
+                                        0.16293015292554872,
+                                        4.036157626725542e-16,
+                                        0.08352979924600704,
+                                        3.4998295008010614e-16,
+                                        0.0508569581336163,
+                                        3.1489164048780735e-16,
+                                        0.034320410449418075,
+                                        3.142469873118059e-16,
+                                        0.024811988673843106,
+                                        2.3653352035940994e-16,
+                                        0.018849001010678823,
+                                        2.9306524147249266e-16,
+                                        0.014866633059596499,
+                                        1.796485796132569e-16,
+                                        0.012077180559557785,
+                                        1.6247782523152451e-16,
+                                        0.010049063750920609,
+                                        1.5324769149805092e-16,
+                                        0.008529750975091871,
+                                        1.0558579733068502e-16,
+                                        0.007363501410705499,
+                                        7.513269775674661e-17,
+                                        0.006450045785294609,
+                                        5.871414177162291e-17,
+                                        0.005722473794997712,
+                                        9.294731722001391e-17,
+                                        0.005134763398167541,
+                                        1.194820309200107e-16,
+                                        0.004654430423785411,
+                                        8.2422739080512e-17,
+                                        0.004258029771397032,
+                                        9.5067306351894e-17,
+                                        0.0039283108282380024,
+                                        1.7540347128474968e-16,
+                                        0.0036523670873925395,
+                                        9.623794010508822e-17,
+                                        0.0034204021424253787,
+                                        1.4083470894369491e-16,
+                                        0.0032248884817922927,
+                                        1.4749333016985644e-16,
+                                        0.0030599828465501895,
+                                        1.0448590642474364e-16,
+                                        0.002921112944200383,
+                                        7.575487373767413e-18,
+                                        0.002804680975178716,
+                                        7.419510610361002e-17,
+                                        0.0027078483284668376,
+                                        3.924741709073613e-17,
+                                        0.0026283777262804953,
+                                        2.2684279102637236e-17,
+                                        0.0025645167846443107,
+                                        8.997077625295079e-17,
+                                        0.0025149120164513483,
+                                        7.131074184849219e-17,
+                                        0.0024785457043284276,
+                                        9.354417496250849e-17,
+                                        0.0024546904085875065,
+                                        1.2488589642405877e-16,
+                                        0.0024428775264784264
+                                    ],
+                                    "frequencies": [
+                                        0,
+                                        100000,
+                                        200000,
+                                        300000,
+                                        400000,
+                                        500000,
+                                        600000,
+                                        700000,
+                                        800000,
+                                        900000,
+                                        1000000,
+                                        1100000,
+                                        1200000,
+                                        1300000,
+                                        1400000,
+                                        1500000,
+                                        1600000,
+                                        1700000,
+                                        1800000,
+                                        1900000,
+                                        2000000,
+                                        2100000,
+                                        2200000,
+                                        2300000,
+                                        2400000,
+                                        2500000,
+                                        2600000,
+                                        2700000,
+                                        2800000,
+                                        2900000,
+                                        3000000,
+                                        3100000,
+                                        3200000,
+                                        3300000,
+                                        3400000,
+                                        3500000,
+                                        3600000,
+                                        3700000,
+                                        3800000,
+                                        3900000,
+                                        4000000,
+                                        4100000,
+                                        4200000,
+                                        4300000,
+                                        4400000,
+                                        4500000,
+                                        4600000,
+                                        4700000,
+                                        4800000,
+                                        4900000,
+                                        5000000,
+                                        5100000,
+                                        5200000,
+                                        5300000,
+                                        5400000,
+                                        5500000,
+                                        5600000,
+                                        5700000,
+                                        5800000,
+                                        5900000,
+                                        6000000,
+                                        6100000,
+                                        6200000,
+                                        6300000
+                                    ]
+                                },
+                                "processed": {
+                                    "acEffectiveFrequency": 110746.40291779551,
+                                    "average": -1.2073675392798577e-14,
+                                    "dutyCycle": 0.5,
+                                    "effectiveFrequency": 110746.40291779551,
+                                    "label": "Triangular",
+                                    "offset": 0,
+                                    "peak": 5,
+                                    "peakToPeak": 10,
+                                    "rms": 2.8874560332150576,
+                                    "thd": 0.12151487440704967
+                                },
+                                "waveform": {
+                                    "data": [
+                                        -5,
+                                        -4.84375,
+                                        -4.6875,
+                                        -4.53125,
+                                        -4.375,
+                                        -4.21875,
+                                        -4.0625,
+                                        -3.90625,
+                                        -3.75,
+                                        -3.59375,
+                                        -3.4375,
+                                        -3.28125,
+                                        -3.125,
+                                        -2.96875,
+                                        -2.8125,
+                                        -2.65625,
+                                        -2.5,
+                                        -2.34375,
+                                        -2.1875,
+                                        -2.03125,
+                                        -1.875,
+                                        -1.71875,
+                                        -1.5625,
+                                        -1.40625,
+                                        -1.25,
+                                        -1.09375,
+                                        -0.9375,
+                                        -0.7812499999999996,
+                                        -0.6249999999999991,
+                                        -0.4687499999999991,
+                                        -0.3124999999999982,
+                                        -0.15624999999999822,
+                                        1.7763568394002505e-15,
+                                        0.15625000000000355,
+                                        0.31250000000000355,
+                                        0.46875000000000355,
+                                        0.6250000000000044,
+                                        0.7812500000000044,
+                                        0.9375000000000044,
+                                        1.0937500000000053,
+                                        1.2500000000000053,
+                                        1.4062500000000069,
+                                        1.5625000000000069,
+                                        1.7187500000000069,
+                                        1.875000000000008,
+                                        2.031250000000008,
+                                        2.187500000000008,
+                                        2.343750000000009,
+                                        2.500000000000009,
+                                        2.656250000000009,
+                                        2.8125000000000098,
+                                        2.9687500000000098,
+                                        3.12500000000001,
+                                        3.2812500000000107,
+                                        3.4375000000000107,
+                                        3.5937500000000124,
+                                        3.7500000000000124,
+                                        3.9062500000000124,
+                                        4.062500000000014,
+                                        4.218750000000014,
+                                        4.375000000000014,
+                                        4.531250000000014,
+                                        4.687500000000014,
+                                        4.843750000000014,
+                                        4.999999999999984,
+                                        4.843749999999984,
+                                        4.687499999999984,
+                                        4.531249999999984,
+                                        4.374999999999984,
+                                        4.218749999999982,
+                                        4.062499999999982,
+                                        3.9062499999999822,
+                                        3.7499999999999822,
+                                        3.593749999999981,
+                                        3.4374999999999805,
+                                        3.2812499999999805,
+                                        3.1249999999999805,
+                                        2.96874999999998,
+                                        2.8124999999999787,
+                                        2.6562499999999787,
+                                        2.499999999999978,
+                                        2.343749999999978,
+                                        2.187499999999978,
+                                        2.031249999999978,
+                                        1.874999999999977,
+                                        1.718749999999977,
+                                        1.5624999999999756,
+                                        1.4062499999999754,
+                                        1.2499999999999751,
+                                        1.0937499999999751,
+                                        0.9374999999999742,
+                                        0.7812499999999738,
+                                        0.6249999999999738,
+                                        0.46874999999997335,
+                                        0.3124999999999729,
+                                        0.15624999999997247,
+                                        -2.7533531010703882e-14,
+                                        -0.15625000000002842,
+                                        -0.3125000000000284,
+                                        -0.4687500000000284,
+                                        -0.6250000000000302,
+                                        -0.7812500000000302,
+                                        -0.9375000000000302,
+                                        -1.093750000000031,
+                                        -1.250000000000031,
+                                        -1.406250000000031,
+                                        -1.562500000000032,
+                                        -1.718750000000032,
+                                        -1.875000000000032,
+                                        -2.0312500000000338,
+                                        -2.1875000000000338,
+                                        -2.3437500000000346,
+                                        -2.5000000000000346,
+                                        -2.6562500000000346,
+                                        -2.8125000000000355,
+                                        -2.9687500000000355,
+                                        -3.1250000000000355,
+                                        -3.281250000000037,
+                                        -3.437500000000037,
+                                        -3.593750000000037,
+                                        -3.7500000000000373,
+                                        -3.9062500000000373,
+                                        -4.062500000000037,
+                                        -4.218750000000039,
+                                        -4.375000000000039,
+                                        -4.531250000000039,
+                                        -4.687500000000039,
+                                        -4.843750000000039
+                                    ],
+                                    "time": [
+                                        0,
+                                        7.8125e-8,
+                                        1.5625e-7,
+                                        2.3437500000000003e-7,
+                                        3.125e-7,
+                                        3.90625e-7,
+                                        4.6875e-7,
+                                        5.468750000000001e-7,
+                                        6.25e-7,
+                                        7.03125e-7,
+                                        7.8125e-7,
+                                        8.59375e-7,
+                                        9.375e-7,
+                                        0.0000010156250000000001,
+                                        0.0000010937500000000001,
+                                        0.0000011718750000000001,
+                                        0.00000125,
+                                        0.000001328125,
+                                        0.00000140625,
+                                        0.000001484375,
+                                        0.0000015625,
+                                        0.000001640625,
+                                        0.00000171875,
+                                        0.000001796875,
+                                        0.000001875,
+                                        0.000001953125,
+                                        0.0000020312500000000002,
+                                        0.0000021093750000000005,
+                                        0.0000021875000000000007,
+                                        0.000002265625000000001,
+                                        0.000002343750000000001,
+                                        0.0000024218750000000013,
+                                        0.0000025000000000000015,
+                                        0.0000025781250000000017,
+                                        0.000002656250000000002,
+                                        0.000002734375000000002,
+                                        0.0000028125000000000023,
+                                        0.0000028906250000000025,
+                                        0.0000029687500000000027,
+                                        0.000003046875000000003,
+                                        0.000003125000000000003,
+                                        0.0000032031250000000033,
+                                        0.0000032812500000000035,
+                                        0.0000033593750000000037,
+                                        0.000003437500000000004,
+                                        0.000003515625000000004,
+                                        0.0000035937500000000043,
+                                        0.0000036718750000000045,
+                                        0.0000037500000000000048,
+                                        0.000003828125000000005,
+                                        0.000003906250000000005,
+                                        0.000003984375000000005,
+                                        0.0000040625000000000056,
+                                        0.000004140625000000006,
+                                        0.000004218750000000006,
+                                        0.000004296875000000006,
+                                        0.000004375000000000006,
+                                        0.000004453125000000007,
+                                        0.000004531250000000007,
+                                        0.000004609375000000007,
+                                        0.000004687500000000007,
+                                        0.000004765625000000007,
+                                        0.000004843750000000008,
+                                        0.000004921875000000008,
+                                        0.000005000000000000008,
+                                        0.000005078125000000008,
+                                        0.0000051562500000000084,
+                                        0.000005234375000000009,
+                                        0.000005312500000000009,
+                                        0.000005390625000000009,
+                                        0.000005468750000000009,
+                                        0.0000055468750000000095,
+                                        0.00000562500000000001,
+                                        0.00000570312500000001,
+                                        0.00000578125000000001,
+                                        0.00000585937500000001,
+                                        0.0000059375000000000105,
+                                        0.000006015625000000011,
+                                        0.000006093750000000011,
+                                        0.000006171875000000011,
+                                        0.000006250000000000011,
+                                        0.0000063281250000000115,
+                                        0.000006406250000000012,
+                                        0.000006484375000000012,
+                                        0.000006562500000000012,
+                                        0.000006640625000000012,
+                                        0.0000067187500000000125,
+                                        0.000006796875000000013,
+                                        0.000006875000000000013,
+                                        0.000006953125000000013,
+                                        0.000007031250000000013,
+                                        0.0000071093750000000136,
+                                        0.000007187500000000014,
+                                        0.000007265625000000014,
+                                        0.000007343750000000014,
+                                        0.000007421875000000014,
+                                        0.000007500000000000015,
+                                        0.000007578125000000015,
+                                        0.000007656250000000015,
+                                        0.000007734375000000015,
+                                        0.000007812500000000015,
+                                        0.000007890625000000016,
+                                        0.000007968750000000016,
+                                        0.000008046875000000016,
+                                        0.000008125000000000016,
+                                        0.000008203125000000016,
+                                        0.000008281250000000017,
+                                        0.000008359375000000017,
+                                        0.000008437500000000017,
+                                        0.000008515625000000017,
+                                        0.000008593750000000017,
+                                        0.000008671875000000018,
+                                        0.000008750000000000018,
+                                        0.000008828125000000018,
+                                        0.000008906250000000018,
+                                        0.000008984375000000018,
+                                        0.000009062500000000019,
+                                        0.000009140625000000019,
+                                        0.000009218750000000019,
+                                        0.00000929687500000002,
+                                        0.00000937500000000002,
+                                        0.00000945312500000002,
+                                        0.00000953125000000002,
+                                        0.00000960937500000002,
+                                        0.00000968750000000002,
+                                        0.00000976562500000002,
+                                        0.00000984375000000002,
+                                        0.000009921875000000021
+                                    ]
+                                }
+                            },
+                            "frequency": 100000,
+                            "magneticFluxDensity": {
+                                "harmonics": {
+                                    "amplitudes": [
+                                        2.4037188727678575e-15,
+                                        0.8393535627850818,
+                                        3.700938248565636e-16,
+                                        0.09341147101622048,
+                                        2.018644844014792e-16,
+                                        0.03373641655029585,
+                                        8.357292527681325e-17,
+                                        0.017295731030299657,
+                                        7.246768248477107e-17,
+                                        0.010530472679668099,
+                                        6.520165457990469e-17,
+                                        0.007106405059521275,
+                                        6.506817230123774e-17,
+                                        0.005137585464149742,
+                                        4.897677457283994e-17,
+                                        0.00390288561224013,
+                                        6.06822671261281e-17,
+                                        0.003078294082422728,
+                                        3.7198144147518665e-17,
+                                        0.0025007083513667204,
+                                        3.3642757302889334e-17,
+                                        0.002080765251576556,
+                                        3.173156019875543e-17,
+                                        0.001766175424247503,
+                                        2.1862659407008646e-17,
+                                        0.001524691080194143,
+                                        1.555702208925884e-17,
+                                        0.001335550402880997,
+                                        1.2157385902078721e-17,
+                                        0.0011848989040991837,
+                                        1.92457280292356e-17,
+                                        0.0010632072319170407,
+                                        2.474002198497129e-17,
+                                        0.0009637491941282779,
+                                        1.7066502479176612e-17,
+                                        0.0008816702339747559,
+                                        1.9684694268148346e-17,
+                                        0.0008133984290865638,
+                                        3.6319149435366813e-17,
+                                        0.0007562613502926628,
+                                        1.9927086405002492e-17,
+                                        0.0007082305477189087,
+                                        2.9161320482128716e-17,
+                                        0.000667747370247118,
+                                        3.054005864264021e-17,
+                                        0.0006336019091269723,
+                                        2.163491532712875e-17,
+                                        0.0006048474226930658,
+                                        1.5685850226244332e-18,
+                                        0.0005807389483796525,
+                                        1.536288379136655e-17,
+                                        0.0005606887216629789,
+                                        8.12659405101835e-18,
+                                        0.0005442334904444431,
+                                        4.697020626375035e-18,
+                                        0.0005310104050323958,
+                                        1.8629403646420172e-17,
+                                        0.0005207392115633555,
+                                        1.4765645574583532e-17,
+                                        0.0005132091808591091,
+                                        1.9369313756373948e-17,
+                                        0.0005082696888154605,
+                                        2.5858949662585672e-17,
+                                        0.000505823706261982
+                                    ],
+                                    "frequencies": [
+                                        0,
+                                        100000,
+                                        200000,
+                                        300000,
+                                        400000,
+                                        500000,
+                                        600000,
+                                        700000,
+                                        800000,
+                                        900000,
+                                        1000000,
+                                        1100000,
+                                        1200000,
+                                        1300000,
+                                        1400000,
+                                        1500000,
+                                        1600000,
+                                        1700000,
+                                        1800000,
+                                        1900000,
+                                        2000000,
+                                        2100000,
+                                        2200000,
+                                        2300000,
+                                        2400000,
+                                        2500000,
+                                        2600000,
+                                        2700000,
+                                        2800000,
+                                        2900000,
+                                        3000000,
+                                        3100000,
+                                        3200000,
+                                        3300000,
+                                        3400000,
+                                        3500000,
+                                        3600000,
+                                        3700000,
+                                        3800000,
+                                        3900000,
+                                        4000000,
+                                        4100000,
+                                        4200000,
+                                        4300000,
+                                        4400000,
+                                        4500000,
+                                        4600000,
+                                        4700000,
+                                        4800000,
+                                        4900000,
+                                        5000000,
+                                        5100000,
+                                        5200000,
+                                        5300000,
+                                        5400000,
+                                        5500000,
+                                        5600000,
+                                        5700000,
+                                        5800000,
+                                        5900000,
+                                        6000000,
+                                        6100000,
+                                        6200000,
+                                        6300000
+                                    ]
+                                },
+                                "processed": {
+                                    "dutyCycle": 0.4999999999999997,
+                                    "label": "Triangular",
+                                    "negativePeak": -1.0353030407364736,
+                                    "offset": -1.6653345369377348e-15,
+                                    "peak": 1.0353030407364736,
+                                    "peakToPeak": 2.0706060814729437,
+                                    "positivePeak": 1.0353030407364703
+                                },
+                                "waveform": {
+                                    "data": [
+                                        -1.0353030407364736,
+                                        1.0353030407364703,
+                                        -1.0353030407364736
+                                    ],
+                                    "time": [
+                                        0,
+                                        0.000005000000000000008,
+                                        0.000010000000000000021
+                                    ]
+                                }
+                            },
+                            "magnetizingCurrent": {
+                                "harmonics": {
+                                    "amplitudes": [
+                                        1.1608769501236793e-14,
+                                        4.05366124583194,
+                                        1.787369544444173e-15,
+                                        0.4511310569983995,
+                                        9.749053004706756e-16,
+                                        0.16293015292554872,
+                                        4.036157626725542e-16,
+                                        0.08352979924600704,
+                                        3.4998295008010614e-16,
+                                        0.0508569581336163,
+                                        3.1489164048780735e-16,
+                                        0.034320410449418075,
+                                        3.142469873118059e-16,
+                                        0.024811988673843106,
+                                        2.3653352035940994e-16,
+                                        0.018849001010678823,
+                                        2.9306524147249266e-16,
+                                        0.014866633059596499,
+                                        1.796485796132569e-16,
+                                        0.012077180559557785,
+                                        1.6247782523152451e-16,
+                                        0.010049063750920609,
+                                        1.5324769149805092e-16,
+                                        0.008529750975091871,
+                                        1.0558579733068502e-16,
+                                        0.007363501410705499,
+                                        7.513269775674661e-17,
+                                        0.006450045785294609,
+                                        5.871414177162291e-17,
+                                        0.005722473794997712,
+                                        9.294731722001391e-17,
+                                        0.005134763398167541,
+                                        1.194820309200107e-16,
+                                        0.004654430423785411,
+                                        8.2422739080512e-17,
+                                        0.004258029771397032,
+                                        9.5067306351894e-17,
+                                        0.0039283108282380024,
+                                        1.7540347128474968e-16,
+                                        0.0036523670873925395,
+                                        9.623794010508822e-17,
+                                        0.0034204021424253787,
+                                        1.4083470894369491e-16,
+                                        0.0032248884817922927,
+                                        1.4749333016985644e-16,
+                                        0.0030599828465501895,
+                                        1.0448590642474364e-16,
+                                        0.002921112944200383,
+                                        7.575487373767413e-18,
+                                        0.002804680975178716,
+                                        7.419510610361002e-17,
+                                        0.0027078483284668376,
+                                        3.924741709073613e-17,
+                                        0.0026283777262804953,
+                                        2.2684279102637236e-17,
+                                        0.0025645167846443107,
+                                        8.997077625295079e-17,
+                                        0.0025149120164513483,
+                                        7.131074184849219e-17,
+                                        0.0024785457043284276,
+                                        9.354417496250849e-17,
+                                        0.0024546904085875065,
+                                        1.2488589642405877e-16,
+                                        0.0024428775264784264
+                                    ],
+                                    "frequencies": [
+                                        0,
+                                        100000,
+                                        200000,
+                                        300000,
+                                        400000,
+                                        500000,
+                                        600000,
+                                        700000,
+                                        800000,
+                                        900000,
+                                        1000000,
+                                        1100000,
+                                        1200000,
+                                        1300000,
+                                        1400000,
+                                        1500000,
+                                        1600000,
+                                        1700000,
+                                        1800000,
+                                        1900000,
+                                        2000000,
+                                        2100000,
+                                        2200000,
+                                        2300000,
+                                        2400000,
+                                        2500000,
+                                        2600000,
+                                        2700000,
+                                        2800000,
+                                        2900000,
+                                        3000000,
+                                        3100000,
+                                        3200000,
+                                        3300000,
+                                        3400000,
+                                        3500000,
+                                        3600000,
+                                        3700000,
+                                        3800000,
+                                        3900000,
+                                        4000000,
+                                        4100000,
+                                        4200000,
+                                        4300000,
+                                        4400000,
+                                        4500000,
+                                        4600000,
+                                        4700000,
+                                        4800000,
+                                        4900000,
+                                        5000000,
+                                        5100000,
+                                        5200000,
+                                        5300000,
+                                        5400000,
+                                        5500000,
+                                        5600000,
+                                        5700000,
+                                        5800000,
+                                        5900000,
+                                        6000000,
+                                        6100000,
+                                        6200000,
+                                        6300000
+                                    ]
+                                },
+                                "processed": {
+                                    "acEffectiveFrequency": 110746.40291779551,
+                                    "average": -1.2073675392798577e-14,
+                                    "dutyCycle": 0.5,
+                                    "effectiveFrequency": 110746.40291779551,
+                                    "label": "Triangular",
+                                    "offset": 0,
+                                    "peak": 5,
+                                    "peakToPeak": 10,
+                                    "rms": 2.8874560332150576,
+                                    "thd": 0.12151487440704967
+                                },
+                                "waveform": {
+                                    "data": [
+                                        -5,
+                                        -4.84375,
+                                        -4.6875,
+                                        -4.53125,
+                                        -4.375,
+                                        -4.21875,
+                                        -4.0625,
+                                        -3.90625,
+                                        -3.75,
+                                        -3.59375,
+                                        -3.4375,
+                                        -3.28125,
+                                        -3.125,
+                                        -2.96875,
+                                        -2.8125,
+                                        -2.65625,
+                                        -2.5,
+                                        -2.34375,
+                                        -2.1875,
+                                        -2.03125,
+                                        -1.875,
+                                        -1.71875,
+                                        -1.5625,
+                                        -1.40625,
+                                        -1.25,
+                                        -1.09375,
+                                        -0.9375,
+                                        -0.7812499999999996,
+                                        -0.6249999999999991,
+                                        -0.4687499999999991,
+                                        -0.3124999999999982,
+                                        -0.15624999999999822,
+                                        1.7763568394002505e-15,
+                                        0.15625000000000355,
+                                        0.31250000000000355,
+                                        0.46875000000000355,
+                                        0.6250000000000044,
+                                        0.7812500000000044,
+                                        0.9375000000000044,
+                                        1.0937500000000053,
+                                        1.2500000000000053,
+                                        1.4062500000000069,
+                                        1.5625000000000069,
+                                        1.7187500000000069,
+                                        1.875000000000008,
+                                        2.031250000000008,
+                                        2.187500000000008,
+                                        2.343750000000009,
+                                        2.500000000000009,
+                                        2.656250000000009,
+                                        2.8125000000000098,
+                                        2.9687500000000098,
+                                        3.12500000000001,
+                                        3.2812500000000107,
+                                        3.4375000000000107,
+                                        3.5937500000000124,
+                                        3.7500000000000124,
+                                        3.9062500000000124,
+                                        4.062500000000014,
+                                        4.218750000000014,
+                                        4.375000000000014,
+                                        4.531250000000014,
+                                        4.687500000000014,
+                                        4.843750000000014,
+                                        4.999999999999984,
+                                        4.843749999999984,
+                                        4.687499999999984,
+                                        4.531249999999984,
+                                        4.374999999999984,
+                                        4.218749999999982,
+                                        4.062499999999982,
+                                        3.9062499999999822,
+                                        3.7499999999999822,
+                                        3.593749999999981,
+                                        3.4374999999999805,
+                                        3.2812499999999805,
+                                        3.1249999999999805,
+                                        2.96874999999998,
+                                        2.8124999999999787,
+                                        2.6562499999999787,
+                                        2.499999999999978,
+                                        2.343749999999978,
+                                        2.187499999999978,
+                                        2.031249999999978,
+                                        1.874999999999977,
+                                        1.718749999999977,
+                                        1.5624999999999756,
+                                        1.4062499999999754,
+                                        1.2499999999999751,
+                                        1.0937499999999751,
+                                        0.9374999999999742,
+                                        0.7812499999999738,
+                                        0.6249999999999738,
+                                        0.46874999999997335,
+                                        0.3124999999999729,
+                                        0.15624999999997247,
+                                        -2.7533531010703882e-14,
+                                        -0.15625000000002842,
+                                        -0.3125000000000284,
+                                        -0.4687500000000284,
+                                        -0.6250000000000302,
+                                        -0.7812500000000302,
+                                        -0.9375000000000302,
+                                        -1.093750000000031,
+                                        -1.250000000000031,
+                                        -1.406250000000031,
+                                        -1.562500000000032,
+                                        -1.718750000000032,
+                                        -1.875000000000032,
+                                        -2.0312500000000338,
+                                        -2.1875000000000338,
+                                        -2.3437500000000346,
+                                        -2.5000000000000346,
+                                        -2.6562500000000346,
+                                        -2.8125000000000355,
+                                        -2.9687500000000355,
+                                        -3.1250000000000355,
+                                        -3.281250000000037,
+                                        -3.437500000000037,
+                                        -3.593750000000037,
+                                        -3.7500000000000373,
+                                        -3.9062500000000373,
+                                        -4.062500000000037,
+                                        -4.218750000000039,
+                                        -4.375000000000039,
+                                        -4.531250000000039,
+                                        -4.687500000000039,
+                                        -4.843750000000039
+                                    ],
+                                    "time": [
+                                        0,
+                                        7.8125e-8,
+                                        1.5625e-7,
+                                        2.3437500000000003e-7,
+                                        3.125e-7,
+                                        3.90625e-7,
+                                        4.6875e-7,
+                                        5.468750000000001e-7,
+                                        6.25e-7,
+                                        7.03125e-7,
+                                        7.8125e-7,
+                                        8.59375e-7,
+                                        9.375e-7,
+                                        0.0000010156250000000001,
+                                        0.0000010937500000000001,
+                                        0.0000011718750000000001,
+                                        0.00000125,
+                                        0.000001328125,
+                                        0.00000140625,
+                                        0.000001484375,
+                                        0.0000015625,
+                                        0.000001640625,
+                                        0.00000171875,
+                                        0.000001796875,
+                                        0.000001875,
+                                        0.000001953125,
+                                        0.0000020312500000000002,
+                                        0.0000021093750000000005,
+                                        0.0000021875000000000007,
+                                        0.000002265625000000001,
+                                        0.000002343750000000001,
+                                        0.0000024218750000000013,
+                                        0.0000025000000000000015,
+                                        0.0000025781250000000017,
+                                        0.000002656250000000002,
+                                        0.000002734375000000002,
+                                        0.0000028125000000000023,
+                                        0.0000028906250000000025,
+                                        0.0000029687500000000027,
+                                        0.000003046875000000003,
+                                        0.000003125000000000003,
+                                        0.0000032031250000000033,
+                                        0.0000032812500000000035,
+                                        0.0000033593750000000037,
+                                        0.000003437500000000004,
+                                        0.000003515625000000004,
+                                        0.0000035937500000000043,
+                                        0.0000036718750000000045,
+                                        0.0000037500000000000048,
+                                        0.000003828125000000005,
+                                        0.000003906250000000005,
+                                        0.000003984375000000005,
+                                        0.0000040625000000000056,
+                                        0.000004140625000000006,
+                                        0.000004218750000000006,
+                                        0.000004296875000000006,
+                                        0.000004375000000000006,
+                                        0.000004453125000000007,
+                                        0.000004531250000000007,
+                                        0.000004609375000000007,
+                                        0.000004687500000000007,
+                                        0.000004765625000000007,
+                                        0.000004843750000000008,
+                                        0.000004921875000000008,
+                                        0.000005000000000000008,
+                                        0.000005078125000000008,
+                                        0.0000051562500000000084,
+                                        0.000005234375000000009,
+                                        0.000005312500000000009,
+                                        0.000005390625000000009,
+                                        0.000005468750000000009,
+                                        0.0000055468750000000095,
+                                        0.00000562500000000001,
+                                        0.00000570312500000001,
+                                        0.00000578125000000001,
+                                        0.00000585937500000001,
+                                        0.0000059375000000000105,
+                                        0.000006015625000000011,
+                                        0.000006093750000000011,
+                                        0.000006171875000000011,
+                                        0.000006250000000000011,
+                                        0.0000063281250000000115,
+                                        0.000006406250000000012,
+                                        0.000006484375000000012,
+                                        0.000006562500000000012,
+                                        0.000006640625000000012,
+                                        0.0000067187500000000125,
+                                        0.000006796875000000013,
+                                        0.000006875000000000013,
+                                        0.000006953125000000013,
+                                        0.000007031250000000013,
+                                        0.0000071093750000000136,
+                                        0.000007187500000000014,
+                                        0.000007265625000000014,
+                                        0.000007343750000000014,
+                                        0.000007421875000000014,
+                                        0.000007500000000000015,
+                                        0.000007578125000000015,
+                                        0.000007656250000000015,
+                                        0.000007734375000000015,
+                                        0.000007812500000000015,
+                                        0.000007890625000000016,
+                                        0.000007968750000000016,
+                                        0.000008046875000000016,
+                                        0.000008125000000000016,
+                                        0.000008203125000000016,
+                                        0.000008281250000000017,
+                                        0.000008359375000000017,
+                                        0.000008437500000000017,
+                                        0.000008515625000000017,
+                                        0.000008593750000000017,
+                                        0.000008671875000000018,
+                                        0.000008750000000000018,
+                                        0.000008828125000000018,
+                                        0.000008906250000000018,
+                                        0.000008984375000000018,
+                                        0.000009062500000000019,
+                                        0.000009140625000000019,
+                                        0.000009218750000000019,
+                                        0.00000929687500000002,
+                                        0.00000937500000000002,
+                                        0.00000945312500000002,
+                                        0.00000953125000000002,
+                                        0.00000960937500000002,
+                                        0.00000968750000000002,
+                                        0.00000976562500000002,
+                                        0.00000984375000000002,
+                                        0.000009921875000000021
+                                    ]
+                                }
+                            },
+                            "name": "Primary winding excitation",
+                            "voltage": {
+                                "harmonics": {
+                                    "amplitudes": [
+                                        24.2890625,
+                                        57.92076613061847,
+                                        1.421875,
+                                        19.27588907896988,
+                                        1.421875,
+                                        11.528257939603122,
+                                        1.421875,
+                                        8.194467538528329,
+                                        1.421875,
+                                        6.331896912839248,
+                                        1.421875,
+                                        5.137996046859012,
+                                        1.421875,
+                                        4.304077056139349,
+                                        1.421875,
+                                        3.6860723299088454,
+                                        1.421875,
+                                        3.207698601961777,
+                                        1.421875,
+                                        2.8247804703632298,
+                                        1.421875,
+                                        2.509960393415185,
+                                        1.421875,
+                                        2.2453859950684323,
+                                        1.421875,
+                                        2.01890737840567,
+                                        1.421875,
+                                        1.8219644341144872,
+                                        1.421875,
+                                        1.6483482744897402,
+                                        1.421875,
+                                        1.4934420157473332,
+                                        1.421875,
+                                        1.3537375367153817,
+                                        1.421875,
+                                        1.2265178099275544,
+                                        1.421875,
+                                        1.1096421410704556,
+                                        1.421875,
+                                        1.0013973584174929,
+                                        1.421875,
+                                        0.9003924136274832,
+                                        1.421875,
+                                        0.8054822382572133,
+                                        1.421875,
+                                        0.7157117294021269,
+                                        1.421875,
+                                        0.6302738400635857,
+                                        1.421875,
+                                        0.5484777114167545,
+                                        1.421875,
+                                        0.46972405216147894,
+                                        1.421875,
+                                        0.3934858059809043,
+                                        1.421875,
+                                        0.31929270856030145,
+                                        1.421875,
+                                        0.24671871675852053,
+                                        1.421875,
+                                        0.17537155450693565,
+                                        1.421875,
+                                        0.10488380107099537,
+                                        1.421875,
+                                        0.034905072061178544
+                                    ],
+                                    "frequencies": [
+                                        0,
+                                        100000,
+                                        200000,
+                                        300000,
+                                        400000,
+                                        500000,
+                                        600000,
+                                        700000,
+                                        800000,
+                                        900000,
+                                        1000000,
+                                        1100000,
+                                        1200000,
+                                        1300000,
+                                        1400000,
+                                        1500000,
+                                        1600000,
+                                        1700000,
+                                        1800000,
+                                        1900000,
+                                        2000000,
+                                        2100000,
+                                        2200000,
+                                        2300000,
+                                        2400000,
+                                        2500000,
+                                        2600000,
+                                        2700000,
+                                        2800000,
+                                        2900000,
+                                        3000000,
+                                        3100000,
+                                        3200000,
+                                        3300000,
+                                        3400000,
+                                        3500000,
+                                        3600000,
+                                        3700000,
+                                        3800000,
+                                        3900000,
+                                        4000000,
+                                        4100000,
+                                        4200000,
+                                        4300000,
+                                        4400000,
+                                        4500000,
+                                        4600000,
+                                        4700000,
+                                        4800000,
+                                        4900000,
+                                        5000000,
+                                        5100000,
+                                        5200000,
+                                        5300000,
+                                        5400000,
+                                        5500000,
+                                        5600000,
+                                        5700000,
+                                        5800000,
+                                        5900000,
+                                        6000000,
+                                        6100000,
+                                        6200000,
+                                        6300000
+                                    ]
+                                },
+                                "processed": {
+                                    "acEffectiveFrequency": 591485.5360118389,
+                                    "average": 24.2890625,
+                                    "dutyCycle": 0.4921874999999997,
+                                    "effectiveFrequency": 553357.3374711702,
+                                    "label": "Unipolar Rectangular",
+                                    "negativePeak": -20.5,
+                                    "offset": -20.5,
+                                    "peak": 70.5,
+                                    "peakToPeak": 111.5,
+                                    "positivePeak": 70.5,
+                                    "rms": 51.572309672924284,
+                                    "thd": 0.4833151484524849
+                                },
+                                "waveform": {
+                                    "data": [
+                                        -20.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        70.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5,
+                                        -20.5
+                                    ],
+                                    "time": [
+                                        0,
+                                        7.8125e-8,
+                                        1.5625e-7,
+                                        2.3437500000000003e-7,
+                                        3.125e-7,
+                                        3.90625e-7,
+                                        4.6875e-7,
+                                        5.468750000000001e-7,
+                                        6.25e-7,
+                                        7.03125e-7,
+                                        7.8125e-7,
+                                        8.59375e-7,
+                                        9.375e-7,
+                                        0.0000010156250000000001,
+                                        0.0000010937500000000001,
+                                        0.0000011718750000000001,
+                                        0.00000125,
+                                        0.000001328125,
+                                        0.00000140625,
+                                        0.000001484375,
+                                        0.0000015625,
+                                        0.000001640625,
+                                        0.00000171875,
+                                        0.000001796875,
+                                        0.000001875,
+                                        0.000001953125,
+                                        0.0000020312500000000002,
+                                        0.0000021093750000000005,
+                                        0.0000021875000000000007,
+                                        0.000002265625000000001,
+                                        0.000002343750000000001,
+                                        0.0000024218750000000013,
+                                        0.0000025000000000000015,
+                                        0.0000025781250000000017,
+                                        0.000002656250000000002,
+                                        0.000002734375000000002,
+                                        0.0000028125000000000023,
+                                        0.0000028906250000000025,
+                                        0.0000029687500000000027,
+                                        0.000003046875000000003,
+                                        0.000003125000000000003,
+                                        0.0000032031250000000033,
+                                        0.0000032812500000000035,
+                                        0.0000033593750000000037,
+                                        0.000003437500000000004,
+                                        0.000003515625000000004,
+                                        0.0000035937500000000043,
+                                        0.0000036718750000000045,
+                                        0.0000037500000000000048,
+                                        0.000003828125000000005,
+                                        0.000003906250000000005,
+                                        0.000003984375000000005,
+                                        0.0000040625000000000056,
+                                        0.000004140625000000006,
+                                        0.000004218750000000006,
+                                        0.000004296875000000006,
+                                        0.000004375000000000006,
+                                        0.000004453125000000007,
+                                        0.000004531250000000007,
+                                        0.000004609375000000007,
+                                        0.000004687500000000007,
+                                        0.000004765625000000007,
+                                        0.000004843750000000008,
+                                        0.000004921875000000008,
+                                        0.000005000000000000008,
+                                        0.000005078125000000008,
+                                        0.0000051562500000000084,
+                                        0.000005234375000000009,
+                                        0.000005312500000000009,
+                                        0.000005390625000000009,
+                                        0.000005468750000000009,
+                                        0.0000055468750000000095,
+                                        0.00000562500000000001,
+                                        0.00000570312500000001,
+                                        0.00000578125000000001,
+                                        0.00000585937500000001,
+                                        0.0000059375000000000105,
+                                        0.000006015625000000011,
+                                        0.000006093750000000011,
+                                        0.000006171875000000011,
+                                        0.000006250000000000011,
+                                        0.0000063281250000000115,
+                                        0.000006406250000000012,
+                                        0.000006484375000000012,
+                                        0.000006562500000000012,
+                                        0.000006640625000000012,
+                                        0.0000067187500000000125,
+                                        0.000006796875000000013,
+                                        0.000006875000000000013,
+                                        0.000006953125000000013,
+                                        0.000007031250000000013,
+                                        0.0000071093750000000136,
+                                        0.000007187500000000014,
+                                        0.000007265625000000014,
+                                        0.000007343750000000014,
+                                        0.000007421875000000014,
+                                        0.000007500000000000015,
+                                        0.000007578125000000015,
+                                        0.000007656250000000015,
+                                        0.000007734375000000015,
+                                        0.000007812500000000015,
+                                        0.000007890625000000016,
+                                        0.000007968750000000016,
+                                        0.000008046875000000016,
+                                        0.000008125000000000016,
+                                        0.000008203125000000016,
+                                        0.000008281250000000017,
+                                        0.000008359375000000017,
+                                        0.000008437500000000017,
+                                        0.000008515625000000017,
+                                        0.000008593750000000017,
+                                        0.000008671875000000018,
+                                        0.000008750000000000018,
+                                        0.000008828125000000018,
+                                        0.000008906250000000018,
+                                        0.000008984375000000018,
+                                        0.000009062500000000019,
+                                        0.000009140625000000019,
+                                        0.000009218750000000019,
+                                        0.00000929687500000002,
+                                        0.00000937500000000002,
+                                        0.00000945312500000002,
+                                        0.00000953125000000002,
+                                        0.00000960937500000002,
+                                        0.00000968750000000002,
+                                        0.00000976562500000002,
+                                        0.00000984375000000002,
+                                        0.000009921875000000021
+                                    ]
+                                }
+                            }
+                        }
+                    ],
+                    "name": "Op. Point No. 1"
+                },
+                "dcResistancePerTurn": [
+                    0.00045364722149068463,
+                    0.00045364722149068463
+                ],
+                "dcResistancePerWinding": [
+                    0.0009072944429813694
+                ],
+                "methodUsed": "AnalyticalModels",
+                "origin": "simulation",
+                "temperature": 100,
+                "windingLosses": 0.012737598038071847,
+                "windingLossesPerLayer": [
+                    {
+                        "name": "Primary section 0 layer 0",
+                        "ohmicLosses": {
+                            "losses": 0.007564478815384254,
+                            "methodUsed": "Ohm",
+                            "origin": "simulation"
+                        },
+                        "proximityEffectLosses": {
+                            "harmonicFrequencies": [
+                                0,
+                                100000,
+                                300000,
+                                500000,
+                                700000
+                            ],
+                            "lossesPerHarmonic": [
+                                0,
+                                8.649515806306478e-7,
+                                1.7806672124430576e-8,
+                                3.0045519042724107e-9,
+                                9.34251601447671e-10
+                            ],
+                            "methodUsed": "Default",
+                            "origin": "simulation"
+                        },
+                        "skinEffectLosses": {
+                            "harmonicFrequencies": [
+                                0,
+                                100000,
+                                200000,
+                                300000,
+                                400000,
+                                500000,
+                                600000,
+                                700000,
+                                800000,
+                                900000,
+                                1000000,
+                                1100000,
+                                1200000,
+                                1300000,
+                                1400000,
+                                1500000,
+                                1600000,
+                                1700000,
+                                1800000,
+                                1900000,
+                                2000000,
+                                2100000,
+                                2200000,
+                                2300000,
+                                2400000,
+                                2500000,
+                                2600000,
+                                2700000,
+                                2800000,
+                                2900000,
+                                3000000,
+                                3100000,
+                                3200000,
+                                3300000,
+                                3400000,
+                                3500000,
+                                3600000,
+                                3700000,
+                                3800000,
+                                3900000,
+                                4000000,
+                                4100000,
+                                4200000,
+                                4300000,
+                                4400000,
+                                4500000,
+                                4600000,
+                                4700000,
+                                4800000,
+                                4900000,
+                                5000000,
+                                5100000,
+                                5200000,
+                                5300000,
+                                5400000,
+                                5500000,
+                                5600000,
+                                5700000,
+                                5800000,
+                                5900000,
+                                6000000,
+                                6100000,
+                                6200000,
+                                6300000
+                            ],
+                            "lossesPerHarmonic": [
+                                0,
+                                0.004948953171880589,
+                                1.903688886483493e-33,
+                                0.0001689260558782034,
+                                9.772424237123955e-34,
+                                0.0000319341844165434,
+                                2.2171752637140432e-34,
+                                0.000010510379685772016,
+                                2.0108817769221405e-34,
+                                0.000004574850281993397,
+                                1.8730708383688e-34,
+                                0.0000023597121574413986,
+                                2.08620370119757e-34,
+                                0.0000013650907876520407,
+                                1.2969878122488806e-34,
+                                8.581847782714345e-7,
+                                2.155406859926149e-34,
+                                5.748147619170676e-7,
+                                8.679426562319598e-35,
+                                4.048224478534213e-7,
+                                7.548375309464804e-35,
+                                2.970082312554894e-7,
+                                7.094866300116333e-35,
+                                2.2548242314164528e-7,
+                                3.540210735275162e-35,
+                                1.7623936240125715e-7,
+                                1.8762221639676755e-35,
+                                1.412712303092431e-7,
+                                1.1949642576471647e-35,
+                                1.157829219914709e-7,
+                                3.113492176242308e-35,
+                                9.678837492637685e-8,
+                                5.334897241594327e-35,
+                                8.236451145097091e-8,
+                                2.626338354601165e-35,
+                                7.123627833722399e-8,
+                                3.607150146312595e-35,
+                                6.253659857519409e-8,
+                                1.265416060374018e-34,
+                                5.566266344726703e-8,
+                                3.9192141732758415e-35,
+                                5.018726653849275e-8,
+                                8.62265497736168e-35,
+                                4.580262128983976e-8,
+                                9.703061174348765e-35,
+                                4.228391346304731e-8,
+                                4.990014872420491e-35,
+                                3.946516235899586e-8,
+                                2.6850716139893496e-37,
+                                3.722294670773854e-8,
+                                2.6339016037013837e-35,
+                                3.5465271239751747e-8,
+                                7.529857337392983e-36,
+                                3.412386896076083e-8,
+                                2.5678077166255323e-36,
+                                3.31488531728085e-8,
+                                4.120248896075536e-35,
+                                3.2505018706182967e-8,
+                                2.6382934045385336e-35,
+                                3.2169338149652e-8,
+                                4.624301142390253e-35,
+                                3.212936126176387e-8,
+                                8.390067146420091e-35,
+                                3.238233741177705e-8
+                            ],
+                            "methodUsed": "Default",
+                            "origin": "simulation"
+                        }
+                    }
+                ],
+                "windingLossesPerSection": [
+                    {
+                        "name": "Primary section 0",
+                        "ohmicLosses": {
+                            "losses": 0.007564478815384254,
+                            "methodUsed": "Ohm",
+                            "origin": "simulation"
+                        },
+                        "proximityEffectLosses": {
+                            "harmonicFrequencies": [
+                                0,
+                                100000,
+                                300000,
+                                500000,
+                                700000
+                            ],
+                            "lossesPerHarmonic": [
+                                0,
+                                8.649515806306478e-7,
+                                1.7806672124430576e-8,
+                                3.0045519042724107e-9,
+                                9.34251601447671e-10
+                            ],
+                            "methodUsed": "Default",
+                            "origin": "simulation"
+                        },
+                        "skinEffectLosses": {
+                            "harmonicFrequencies": [
+                                0,
+                                100000,
+                                200000,
+                                300000,
+                                400000,
+                                500000,
+                                600000,
+                                700000,
+                                800000,
+                                900000,
+                                1000000,
+                                1100000,
+                                1200000,
+                                1300000,
+                                1400000,
+                                1500000,
+                                1600000,
+                                1700000,
+                                1800000,
+                                1900000,
+                                2000000,
+                                2100000,
+                                2200000,
+                                2300000,
+                                2400000,
+                                2500000,
+                                2600000,
+                                2700000,
+                                2800000,
+                                2900000,
+                                3000000,
+                                3100000,
+                                3200000,
+                                3300000,
+                                3400000,
+                                3500000,
+                                3600000,
+                                3700000,
+                                3800000,
+                                3900000,
+                                4000000,
+                                4100000,
+                                4200000,
+                                4300000,
+                                4400000,
+                                4500000,
+                                4600000,
+                                4700000,
+                                4800000,
+                                4900000,
+                                5000000,
+                                5100000,
+                                5200000,
+                                5300000,
+                                5400000,
+                                5500000,
+                                5600000,
+                                5700000,
+                                5800000,
+                                5900000,
+                                6000000,
+                                6100000,
+                                6200000,
+                                6300000
+                            ],
+                            "lossesPerHarmonic": [
+                                0,
+                                0.004948953171880589,
+                                1.903688886483493e-33,
+                                0.0001689260558782034,
+                                9.772424237123955e-34,
+                                0.0000319341844165434,
+                                2.2171752637140432e-34,
+                                0.000010510379685772016,
+                                2.0108817769221405e-34,
+                                0.000004574850281993397,
+                                1.8730708383688e-34,
+                                0.0000023597121574413986,
+                                2.08620370119757e-34,
+                                0.0000013650907876520407,
+                                1.2969878122488806e-34,
+                                8.581847782714345e-7,
+                                2.155406859926149e-34,
+                                5.748147619170676e-7,
+                                8.679426562319598e-35,
+                                4.048224478534213e-7,
+                                7.548375309464804e-35,
+                                2.970082312554894e-7,
+                                7.094866300116333e-35,
+                                2.2548242314164528e-7,
+                                3.540210735275162e-35,
+                                1.7623936240125715e-7,
+                                1.8762221639676755e-35,
+                                1.412712303092431e-7,
+                                1.1949642576471647e-35,
+                                1.157829219914709e-7,
+                                3.113492176242308e-35,
+                                9.678837492637685e-8,
+                                5.334897241594327e-35,
+                                8.236451145097091e-8,
+                                2.626338354601165e-35,
+                                7.123627833722399e-8,
+                                3.607150146312595e-35,
+                                6.253659857519409e-8,
+                                1.265416060374018e-34,
+                                5.566266344726703e-8,
+                                3.9192141732758415e-35,
+                                5.018726653849275e-8,
+                                8.62265497736168e-35,
+                                4.580262128983976e-8,
+                                9.703061174348765e-35,
+                                4.228391346304731e-8,
+                                4.990014872420491e-35,
+                                3.946516235899586e-8,
+                                2.6850716139893496e-37,
+                                3.722294670773854e-8,
+                                2.6339016037013837e-35,
+                                3.5465271239751747e-8,
+                                7.529857337392983e-36,
+                                3.412386896076083e-8,
+                                2.5678077166255323e-36,
+                                3.31488531728085e-8,
+                                4.120248896075536e-35,
+                                3.2505018706182967e-8,
+                                2.6382934045385336e-35,
+                                3.2169338149652e-8,
+                                4.624301142390253e-35,
+                                3.212936126176387e-8,
+                                8.390067146420091e-35,
+                                3.238233741177705e-8
+                            ],
+                            "methodUsed": "Default",
+                            "origin": "simulation"
+                        }
+                    }
+                ],
+                "windingLossesPerTurn": [
+                    {
+                        "name": "Primary parallel 0 turn 0",
+                        "ohmicLosses": {
+                            "losses": 0.003782239407692127,
+                            "methodUsed": "Ohm",
+                            "origin": "simulation"
+                        },
+                        "proximityEffectLosses": {
+                            "harmonicFrequencies": [
+                                0,
+                                100000,
+                                300000,
+                                500000,
+                                700000
+                            ],
+                            "lossesPerHarmonic": [
+                                0,
+                                4.324757903153157e-7,
+                                8.903336062215121e-9,
+                                1.5022759521361772e-9,
+                                4.671258007238265e-10
+                            ],
+                            "methodUsed": "Default",
+                            "origin": "simulation"
+                        },
+                        "skinEffectLosses": {
+                            "harmonicFrequencies": [
+                                0,
+                                100000,
+                                200000,
+                                300000,
+                                400000,
+                                500000,
+                                600000,
+                                700000,
+                                800000,
+                                900000,
+                                1000000,
+                                1100000,
+                                1200000,
+                                1300000,
+                                1400000,
+                                1500000,
+                                1600000,
+                                1700000,
+                                1800000,
+                                1900000,
+                                2000000,
+                                2100000,
+                                2200000,
+                                2300000,
+                                2400000,
+                                2500000,
+                                2600000,
+                                2700000,
+                                2800000,
+                                2900000,
+                                3000000,
+                                3100000,
+                                3200000,
+                                3300000,
+                                3400000,
+                                3500000,
+                                3600000,
+                                3700000,
+                                3800000,
+                                3900000,
+                                4000000,
+                                4100000,
+                                4200000,
+                                4300000,
+                                4400000,
+                                4500000,
+                                4600000,
+                                4700000,
+                                4800000,
+                                4900000,
+                                5000000,
+                                5100000,
+                                5200000,
+                                5300000,
+                                5400000,
+                                5500000,
+                                5600000,
+                                5700000,
+                                5800000,
+                                5900000,
+                                6000000,
+                                6100000,
+                                6200000,
+                                6300000
+                            ],
+                            "lossesPerHarmonic": [
+                                0,
+                                0.0024744765859402943,
+                                9.518444432417465e-34,
+                                0.0000844630279391017,
+                                4.8862121185619775e-34,
+                                0.0000159670922082717,
+                                1.1085876318570216e-34,
+                                0.000005255189842886008,
+                                1.0054408884610702e-34,
+                                0.0000022874251409966986,
+                                9.365354191844e-35,
+                                0.0000011798560787206993,
+                                1.043101850598785e-34,
+                                6.825453938260203e-7,
+                                6.484939061244403e-35,
+                                4.2909238913571725e-7,
+                                1.0777034299630745e-34,
+                                2.874073809585338e-7,
+                                4.339713281159799e-35,
+                                2.0241122392671065e-7,
+                                3.774187654732402e-35,
+                                1.485041156277447e-7,
+                                3.5474331500581664e-35,
+                                1.1274121157082264e-7,
+                                1.770105367637581e-35,
+                                8.811968120062857e-8,
+                                9.381110819838377e-36,
+                                7.063561515462155e-8,
+                                5.974821288235823e-36,
+                                5.789146099573545e-8,
+                                1.556746088121154e-35,
+                                4.8394187463188426e-8,
+                                2.6674486207971635e-35,
+                                4.1182255725485456e-8,
+                                1.3131691773005826e-35,
+                                3.5618139168611996e-8,
+                                1.8035750731562974e-35,
+                                3.1268299287597046e-8,
+                                6.32708030187009e-35,
+                                2.7831331723633514e-8,
+                                1.9596070866379208e-35,
+                                2.5093633269246375e-8,
+                                4.31132748868084e-35,
+                                2.290131064491988e-8,
+                                4.851530587174383e-35,
+                                2.1141956731523654e-8,
+                                2.4950074362102457e-35,
+                                1.973258117949793e-8,
+                                1.3425358069946748e-37,
+                                1.861147335386927e-8,
+                                1.3169508018506919e-35,
+                                1.7732635619875873e-8,
+                                3.764928668696491e-36,
+                                1.7061934480380416e-8,
+                                1.2839038583127661e-36,
+                                1.657442658640425e-8,
+                                2.060124448037768e-35,
+                                1.6252509353091483e-8,
+                                1.3191467022692668e-35,
+                                1.6084669074826e-8,
+                                2.3121505711951265e-35,
+                                1.6064680630881934e-8,
+                                4.1950335732100456e-35,
+                                1.6191168705888525e-8
+                            ],
+                            "methodUsed": "Default",
+                            "origin": "simulation"
+                        }
+                    },
+                    {
+                        "name": "Primary parallel 0 turn 1",
+                        "ohmicLosses": {
+                            "losses": 0.003782239407692127,
+                            "methodUsed": "Ohm",
+                            "origin": "simulation"
+                        },
+                        "proximityEffectLosses": {
+                            "harmonicFrequencies": [
+                                0,
+                                100000,
+                                300000,
+                                500000,
+                                700000
+                            ],
+                            "lossesPerHarmonic": [
+                                0,
+                                4.324757903153321e-7,
+                                8.903336062215455e-9,
+                                1.5022759521362335e-9,
+                                4.671258007238444e-10
+                            ],
+                            "methodUsed": "Default",
+                            "origin": "simulation"
+                        },
+                        "skinEffectLosses": {
+                            "harmonicFrequencies": [
+                                0,
+                                100000,
+                                200000,
+                                300000,
+                                400000,
+                                500000,
+                                600000,
+                                700000,
+                                800000,
+                                900000,
+                                1000000,
+                                1100000,
+                                1200000,
+                                1300000,
+                                1400000,
+                                1500000,
+                                1600000,
+                                1700000,
+                                1800000,
+                                1900000,
+                                2000000,
+                                2100000,
+                                2200000,
+                                2300000,
+                                2400000,
+                                2500000,
+                                2600000,
+                                2700000,
+                                2800000,
+                                2900000,
+                                3000000,
+                                3100000,
+                                3200000,
+                                3300000,
+                                3400000,
+                                3500000,
+                                3600000,
+                                3700000,
+                                3800000,
+                                3900000,
+                                4000000,
+                                4100000,
+                                4200000,
+                                4300000,
+                                4400000,
+                                4500000,
+                                4600000,
+                                4700000,
+                                4800000,
+                                4900000,
+                                5000000,
+                                5100000,
+                                5200000,
+                                5300000,
+                                5400000,
+                                5500000,
+                                5600000,
+                                5700000,
+                                5800000,
+                                5900000,
+                                6000000,
+                                6100000,
+                                6200000,
+                                6300000
+                            ],
+                            "lossesPerHarmonic": [
+                                0,
+                                0.0024744765859402943,
+                                9.518444432417465e-34,
+                                0.0000844630279391017,
+                                4.8862121185619775e-34,
+                                0.0000159670922082717,
+                                1.1085876318570216e-34,
+                                0.000005255189842886008,
+                                1.0054408884610702e-34,
+                                0.0000022874251409966986,
+                                9.365354191844e-35,
+                                0.0000011798560787206993,
+                                1.043101850598785e-34,
+                                6.825453938260203e-7,
+                                6.484939061244403e-35,
+                                4.2909238913571725e-7,
+                                1.0777034299630745e-34,
+                                2.874073809585338e-7,
+                                4.339713281159799e-35,
+                                2.0241122392671065e-7,
+                                3.774187654732402e-35,
+                                1.485041156277447e-7,
+                                3.5474331500581664e-35,
+                                1.1274121157082264e-7,
+                                1.770105367637581e-35,
+                                8.811968120062857e-8,
+                                9.381110819838377e-36,
+                                7.063561515462155e-8,
+                                5.974821288235823e-36,
+                                5.789146099573545e-8,
+                                1.556746088121154e-35,
+                                4.8394187463188426e-8,
+                                2.6674486207971635e-35,
+                                4.1182255725485456e-8,
+                                1.3131691773005826e-35,
+                                3.5618139168611996e-8,
+                                1.8035750731562974e-35,
+                                3.1268299287597046e-8,
+                                6.32708030187009e-35,
+                                2.7831331723633514e-8,
+                                1.9596070866379208e-35,
+                                2.5093633269246375e-8,
+                                4.31132748868084e-35,
+                                2.290131064491988e-8,
+                                4.851530587174383e-35,
+                                2.1141956731523654e-8,
+                                2.4950074362102457e-35,
+                                1.973258117949793e-8,
+                                1.3425358069946748e-37,
+                                1.861147335386927e-8,
+                                1.3169508018506919e-35,
+                                1.7732635619875873e-8,
+                                3.764928668696491e-36,
+                                1.7061934480380416e-8,
+                                1.2839038583127661e-36,
+                                1.657442658640425e-8,
+                                2.060124448037768e-35,
+                                1.6252509353091483e-8,
+                                1.3191467022692668e-35,
+                                1.6084669074826e-8,
+                                2.3121505711951265e-35,
+                                1.6064680630881934e-8,
+                                4.1950335732100456e-35,
+                                1.6191168705888525e-8
+                            ],
+                            "methodUsed": "Default",
+                            "origin": "simulation"
+                        }
+                    }
+                ],
+                "windingLossesPerWinding": [
+                    {
+                        "name": "Primary",
+                        "ohmicLosses": {
+                            "losses": 0.007564478815384254,
+                            "methodUsed": "Ohm",
+                            "origin": "simulation"
+                        },
+                        "proximityEffectLosses": {
+                            "harmonicFrequencies": [
+                                0,
+                                100000,
+                                300000,
+                                500000,
+                                700000
+                            ],
+                            "lossesPerHarmonic": [
+                                0,
+                                8.649515806306478e-7,
+                                1.7806672124430576e-8,
+                                3.0045519042724107e-9,
+                                9.34251601447671e-10
+                            ],
+                            "methodUsed": "Default",
+                            "origin": "simulation"
+                        },
+                        "skinEffectLosses": {
+                            "harmonicFrequencies": [
+                                0,
+                                100000,
+                                200000,
+                                300000,
+                                400000,
+                                500000,
+                                600000,
+                                700000,
+                                800000,
+                                900000,
+                                1000000,
+                                1100000,
+                                1200000,
+                                1300000,
+                                1400000,
+                                1500000,
+                                1600000,
+                                1700000,
+                                1800000,
+                                1900000,
+                                2000000,
+                                2100000,
+                                2200000,
+                                2300000,
+                                2400000,
+                                2500000,
+                                2600000,
+                                2700000,
+                                2800000,
+                                2900000,
+                                3000000,
+                                3100000,
+                                3200000,
+                                3300000,
+                                3400000,
+                                3500000,
+                                3600000,
+                                3700000,
+                                3800000,
+                                3900000,
+                                4000000,
+                                4100000,
+                                4200000,
+                                4300000,
+                                4400000,
+                                4500000,
+                                4600000,
+                                4700000,
+                                4800000,
+                                4900000,
+                                5000000,
+                                5100000,
+                                5200000,
+                                5300000,
+                                5400000,
+                                5500000,
+                                5600000,
+                                5700000,
+                                5800000,
+                                5900000,
+                                6000000,
+                                6100000,
+                                6200000,
+                                6300000
+                            ],
+                            "lossesPerHarmonic": [
+                                0,
+                                0.004948953171880589,
+                                1.903688886483493e-33,
+                                0.0001689260558782034,
+                                9.772424237123955e-34,
+                                0.0000319341844165434,
+                                2.2171752637140432e-34,
+                                0.000010510379685772016,
+                                2.0108817769221405e-34,
+                                0.000004574850281993397,
+                                1.8730708383688e-34,
+                                0.0000023597121574413986,
+                                2.08620370119757e-34,
+                                0.0000013650907876520407,
+                                1.2969878122488806e-34,
+                                8.581847782714345e-7,
+                                2.155406859926149e-34,
+                                5.748147619170676e-7,
+                                8.679426562319598e-35,
+                                4.048224478534213e-7,
+                                7.548375309464804e-35,
+                                2.970082312554894e-7,
+                                7.094866300116333e-35,
+                                2.2548242314164528e-7,
+                                3.540210735275162e-35,
+                                1.7623936240125715e-7,
+                                1.8762221639676755e-35,
+                                1.412712303092431e-7,
+                                1.1949642576471647e-35,
+                                1.157829219914709e-7,
+                                3.113492176242308e-35,
+                                9.678837492637685e-8,
+                                5.334897241594327e-35,
+                                8.236451145097091e-8,
+                                2.626338354601165e-35,
+                                7.123627833722399e-8,
+                                3.607150146312595e-35,
+                                6.253659857519409e-8,
+                                1.265416060374018e-34,
+                                5.566266344726703e-8,
+                                3.9192141732758415e-35,
+                                5.018726653849275e-8,
+                                8.62265497736168e-35,
+                                4.580262128983976e-8,
+                                9.703061174348765e-35,
+                                4.228391346304731e-8,
+                                4.990014872420491e-35,
+                                3.946516235899586e-8,
+                                2.6850716139893496e-37,
+                                3.722294670773854e-8,
+                                2.6339016037013837e-35,
+                                3.5465271239751747e-8,
+                                7.529857337392983e-36,
+                                3.412386896076083e-8,
+                                2.5678077166255323e-36,
+                                3.31488531728085e-8,
+                                4.120248896075536e-35,
+                                3.2505018706182967e-8,
+                                2.6382934045385336e-35,
+                                3.2169338149652e-8,
+                                4.624301142390253e-35,
+                                3.212936126176387e-8,
+                                8.390067146420091e-35,
+                                3.238233741177705e-8
+                            ],
+                            "methodUsed": "Default",
+                            "origin": "simulation"
+                        }
+                    }
+                ]
+            }
+        }
+    ]
+}

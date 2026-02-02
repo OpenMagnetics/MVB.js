@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Rectangular Toroidal Turn Test</title>
+  <style>
+    body { font-family: monospace; padding: 20px; }
+    pre { background: #f0f0f0; padding: 10px; }
+  </style>
+</head>
+<body>
+  <h1>Rectangular Toroidal Turn Dimension Test</h1>
+  <pre id="log"></pre>
+  
+  <script type="module">
+    import { initReplicad } from './src/replicadBuilder.js';
+    
+    const log = (msg) => {
+      document.getElementById('log').textContent += msg + '\n';
+      console.log(msg);
+    };
+    
+    async function runTest() {
+      log('Initializing...');
+      
+      const r = await initReplicad();
+      const { ReplicadBuilder } = await import('./src/replicadBuilder.js');
+      const builder = new ReplicadBuilder(r);
+      
+      log('Creating simple rectangular toroidal turn...');
+      
+      // Simple test case with known dimensions
+      // Core: T 28/14/12 -> outer=27.79mm, inner=14.1mm, height=12mm
+      // Wire: 6.085mm x 1.085mm rectangular
+      
+      const turnDescription = {
+        coordinates: [-0.004, 0],  // inner radius ~4mm from center (in meters)
+        additionalCoordinates: [[-0.017, 0]],  // outer radius ~17mm from center
+        rotation: 180,  // turn angle
+        dimensions: [0.006085, 0.001085],  // wire: 6.085mm x 1.085mm
+        crossSectionalShape: 'rectangular'
+      };
+      
+      const wireDescription = {
+        wireType: 'rectangular',
+        outerWidth: 0.006085,
+        outerHeight: 0.001085
+      };
+      
+      const bobbinDescription = {
+        columnDepth: 0.006,  // half of core height = 6mm
+        windingWindowRadialHeight: 0.00685,  // radial height of winding window
+        windingWindows: [{
+          radialHeight: 0.00685
+        }]
+      };
+      
+      log('');
+      log('Input parameters:');
+      log('  Wire dimensions: 6.085mm x 1.085mm (rectangular)');
+      log('  Inner coordinates: [-4mm, 0] -> innerRadial = 4mm');
+      log('  Outer coordinates: [-17mm, 0] -> outerRadial = 17mm');
+      log('  Core half-height (columnDepth): 6mm');
+      log('  Turn rotation: 180°');
+      log('');
+      
+      log('Expected turn geometry:');
+      log('  - Inner/outer tubes should run along Y (through toroid hole)');
+      log('  - Radial segments on top/bottom connect inner to outer');
+      log('  - 4 corner pieces connecting tubes to radials');
+      log('  - Turn should wrap AROUND the core cross-section');
+      log('');
+      
+      try {
+        const turn = builder._createToroidalTurn(turnDescription, wireDescription, bobbinDescription);
+        
+        if (turn) {
+          const bounds = turn.boundingBox;
+          const bb = bounds.bounds;
+          
+          log('Generated turn bounding box:');
+          log(`  X: ${bb[0][0].toFixed(3)} to ${bb[1][0].toFixed(3)} (size: ${(bb[1][0]-bb[0][0]).toFixed(3)} mm)`);
+          log(`  Y: ${bb[0][1].toFixed(3)} to ${bb[1][1].toFixed(3)} (size: ${(bb[1][1]-bb[0][1]).toFixed(3)} mm)`);
+          log(`  Z: ${bb[0][2].toFixed(3)} to ${bb[1][2].toFixed(3)} (size: ${(bb[1][2]-bb[0][2]).toFixed(3)} mm)`);
+          log('');
+          
+          // Expected dimensions for a turn that wraps around the core:
+          // X extent: from inner to outer radius = 4 to 17mm = 13mm + wire width
+          // Y extent: core height + wire passing over top/bottom = ~12mm + wire  
+          // Z extent: ~wire height (1.085mm) in the Z direction
+          
+          const xSize = bb[1][0] - bb[0][0];
+          const ySize = bb[1][1] - bb[0][1];
+          const zSize = bb[1][2] - bb[0][2];
+          
+          log('Dimension analysis:');
+          log(`  X size (radial extent): ${xSize.toFixed(2)}mm`);
+          log(`    Expected: ~13mm (inner 4mm to outer 17mm)`);
+          log(`  Y size (through-hole extent): ${ySize.toFixed(2)}mm`);
+          log(`    Expected: ~13-15mm (2x tubeLength through core + radial segments)`);
+          log(`  Z size (wire height): ${zSize.toFixed(2)}mm`);
+          log(`    Expected: ~1-2mm (wire height 1.085mm)`);
+          log('');
+          
+          // Check if dimensions make sense
+          let issues = [];
+          if (xSize < 10 || xSize > 20) {
+            issues.push(`X size ${xSize.toFixed(1)}mm unexpected (expected ~13mm)`);
+          }
+          if (ySize < 10 || ySize > 20) {
+            issues.push(`Y size ${ySize.toFixed(1)}mm unexpected (expected ~13-15mm)`);
+          }
+          if (zSize < 0.5 || zSize > 10) {
+            issues.push(`Z size ${zSize.toFixed(1)}mm unexpected (expected ~1-2mm)`);
+          }
+          
+          if (issues.length === 0) {
+            log('✓ Dimensions look reasonable!');
+          } else {
+            log('⚠ Dimension issues:');
+            issues.forEach(i => log('  - ' + i));
+          }
+          
+          // Export STL
+          const stl = turn.bpiExportSTL();
+          window.turnSTL = stl;
+          
+          if (typeof saveFile === 'function') {
+            const encoder = new TextEncoder();
+            const bytes = encoder.encode(stl);
+            const base64 = btoa(String.fromCharCode(...bytes));
+            await saveFile('rect_turn_test.stl', base64);
+          }
+          
+          log('');
+          log('✓ Test complete!');
+        } else {
+          log('✗ Turn creation returned null');
+        }
+      } catch (e) {
+        log('✗ Error: ' + e.message);
+        console.error(e);
+      }
+      
+      window.testsDone = true;
+    }
+    
+    runTest();
+  </script>
+</body>
+</html>

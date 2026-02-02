@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Bug Web 0 Test</title>
+  <style>
+    body { font-family: monospace; padding: 20px; }
+    .pass { color: green; }
+    .fail { color: red; }
+    pre { background: #f5f5f5; padding: 10px; overflow: auto; }
+  </style>
+</head>
+<body>
+  <h1>Bug Web 0 Test - Bobbin and Turns</h1>
+  <div id="output">Loading...</div>
+  
+  <script type="module">
+    import opencascade from 'replicad-opencascadejs/src/replicad_single.js';
+    import wasmUrl from 'replicad-opencascadejs/src/replicad_single.wasm?url';
+    import * as replicad from 'replicad';
+    import { ReplicadBuilder } from './src/replicadBuilder.js';
+    import { ColumnShape } from './src/types.js';
+    
+    const output = document.getElementById('output');
+    
+    function log(msg, className = '') {
+      const div = document.createElement('div');
+      div.className = className;
+      div.textContent = msg;
+      output.appendChild(div);
+    }
+    
+    async function runTests() {
+      output.innerHTML = '';
+      log('=== Bug Web 0 Test ===');
+      log('');
+      
+      // Load test data
+      const response = await fetch('./tests/testData/bug_web_0.json');
+      const testData = await response.json();
+      
+      const bobbin = testData.magnetic.coil.bobbin.processedDescription;
+      const turnsDescription = testData.magnetic.coil.turnsDescription;
+      const wire = testData.magnetic.coil.functionalDescription[0].wire;
+      
+      log('Bobbin data:');
+      log(`  columnShape: ${bobbin.columnShape}`);
+      log(`  columnDepth: ${bobbin.columnDepth}`);
+      log(`  columnWidth: ${bobbin.columnWidth}`);
+      log(`  columnThickness: ${bobbin.columnThickness}`);
+      log(`  wallThickness: ${bobbin.wallThickness}`);
+      log(`  windingWindows: ${bobbin.windingWindows ? 'present (' + bobbin.windingWindows.length + ')' : 'missing'}`);
+      if (bobbin.windingWindows && bobbin.windingWindows.length > 0) {
+        log(`    [0].height: ${bobbin.windingWindows[0].height}`);
+        log(`    [0].width: ${bobbin.windingWindows[0].width}`);
+      }
+      log(`  windingWindowHeight: ${bobbin.windingWindowHeight}`);
+      log(`  windingWindowWidth: ${bobbin.windingWindowWidth}`);
+      log('');
+      
+      log('Wire data:');
+      log(`  type: ${wire.type}`);
+      log(`  outerDiameter: ${wire.outerDiameter?.nominal}`);
+      log(`  conductingDiameter: ${wire.conductingDiameter?.nominal}`);
+      log('');
+      
+      log(`Turns: ${turnsDescription.length} turns`);
+      if (turnsDescription.length > 0) {
+        const turn0 = turnsDescription[0];
+        log(`  Turn 0:`);
+        log(`    coordinates: [${turn0.coordinates.join(', ')}]`);
+        log(`    dimensions: [${turn0.dimensions.join(', ')}]`);
+        log(`    crossSectionalShape: ${turn0.crossSectionalShape}`);
+      }
+      log('');
+      
+      // Initialize OpenCASCADE
+      log('Loading OpenCASCADE...');
+      try {
+        const OC = await opencascade({ locateFile: () => wasmUrl });
+        replicad.setOC(OC);
+        log('OpenCASCADE loaded successfully', 'pass');
+      } catch (err) {
+        log(`Failed to load OpenCASCADE: ${err.message}`, 'fail');
+        return;
+      }
+      log('');
+      
+      const builder = new ReplicadBuilder(replicad);
+      
+      // Test getBobbin
+      log('Testing getBobbin...');
+      try {
+        const bobbinShape = builder.getBobbin(bobbin);
+        if (bobbinShape) {
+          log('  ✓ Bobbin created successfully', 'pass');
+          
+          // Export to STL
+          const stlOptions = { tolerance: 0.5, angularTolerance: 0.5, binary: false };
+          const stl = bobbinShape.blobSTL(stlOptions);
+          const stlText = await stl.text();
+          log(`  STL size: ${stlText.length} bytes`);
+          
+          // Download link
+          const blob = new Blob([stlText], { type: 'model/stl' });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = 'bug_web_0_bobbin.stl';
+          link.textContent = '  Download Bobbin STL';
+          output.appendChild(link);
+          output.appendChild(document.createElement('br'));
+        } else {
+          log('  ✗ Bobbin returned null', 'fail');
+        }
+      } catch (err) {
+        log(`  ✗ Bobbin error: ${err.message}`, 'fail');
+        log(`    ${err.stack?.split('\n')[1] || ''}`, 'fail');
+      }
+      log('');
+      
+      // Test getTurn for first turn
+      log('Testing getTurn for turn 0...');
+      try {
+        const wireDesc = {
+          wireType: wire.type || 'round',
+          outerDiameter: wire.outerDiameter?.nominal,
+          conductingDiameter: wire.conductingDiameter?.nominal
+        };
+        
+        const turn0 = turnsDescription[0];
+        const isToroidal = false;
+        
+        // Log calculated values
+        const SCALE = 1000;
+        const halfColDepth = bobbin.columnDepth * SCALE;
+        const halfColWidth = bobbin.columnWidth * SCALE;
+        const wireDiameter = wireDesc.outerDiameter * SCALE;
+        const wireRadius = wireDiameter / 2;
+        const coords = turn0.coordinates;
+        const radialPos = coords[0] * SCALE;
+        const heightPos = coords[1] * SCALE;
+        let turnTurnRadius = radialPos - halfColWidth;
+        if (turnTurnRadius < wireRadius) {
+          turnTurnRadius = wireRadius;
+        }
+        
+        log(`  Calculated values:`);
+        log(`    halfColDepth: ${halfColDepth.toFixed(4)} mm`);
+        log(`    halfColWidth: ${halfColWidth.toFixed(4)} mm`);
+        log(`    wireDiameter: ${wireDiameter.toFixed(4)} mm`);
+        log(`    wireRadius: ${wireRadius.toFixed(4)} mm`);
+        log(`    radialPos: ${radialPos.toFixed(4)} mm`);
+        log(`    heightPos: ${heightPos.toFixed(4)} mm`);
+        log(`    turnTurnRadius: ${turnTurnRadius.toFixed(4)} mm`);
+        
+        const turnShape = builder.getTurn(turn0, wireDesc, bobbin, isToroidal);
+        if (turnShape) {
+          log('  ✓ Turn 0 created successfully', 'pass');
+          
+          const stlOptions = { tolerance: 0.5, angularTolerance: 0.5, binary: false };
+          const stl = turnShape.blobSTL(stlOptions);
+          const stlText = await stl.text();
+          log(`  STL size: ${stlText.length} bytes`);
+          
+          // Download link
+          const blob = new Blob([stlText], { type: 'model/stl' });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = 'bug_web_0_turn0.stl';
+          link.textContent = '  Download Turn 0 STL';
+          output.appendChild(link);
+          output.appendChild(document.createElement('br'));
+        } else {
+          log('  ✗ Turn 0 returned null', 'fail');
+        }
+      } catch (err) {
+        log(`  ✗ Turn 0 error: ${err.message}`, 'fail');
+        log(`    ${err.stack?.split('\n')[1] || ''}`, 'fail');
+      }
+      log('');
+      
+      // Test all turns
+      log('Testing all turns...');
+      let passCount = 0;
+      let failCount = 0;
+      
+      const wireDesc = {
+        wireType: wire.type || 'round',
+        outerDiameter: wire.outerDiameter?.nominal,
+        conductingDiameter: wire.conductingDiameter?.nominal
+      };
+      
+      for (let i = 0; i < turnsDescription.length; i++) {
+        try {
+          const turn = turnsDescription[i];
+          const turnShape = builder.getTurn(turn, wireDesc, bobbin, false);
+          if (turnShape) {
+            passCount++;
+          } else {
+            log(`  Turn ${i} returned null`, 'fail');
+            failCount++;
+          }
+        } catch (err) {
+          log(`  Turn ${i} error: ${err.message}`, 'fail');
+          failCount++;
+        }
+      }
+      
+      log(`  Passed: ${passCount}/${turnsDescription.length}`, passCount === turnsDescription.length ? 'pass' : '');
+      if (failCount > 0) {
+        log(`  Failed: ${failCount}/${turnsDescription.length}`, 'fail');
+      }
+      log('');
+      
+      log('=== Test complete ===');
+    }
+    
+    runTests().catch(err => {
+      log(`Test failed: ${err.message}`, 'fail');
+      console.error(err);
+    });
+  </script>
+</body>
+</html>

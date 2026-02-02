@@ -90,6 +90,9 @@ export class ShapePiece {
    * @param {Object} machining - Machining parameters
    * @param {Object} dimensions - Shape dimensions
    * @returns {Object} - Machined piece
+   * 
+   * Note: machining.coordinates[1] is the CENTER of the gap (like Python/CadQuery convention).
+   * replicad's makeBaseBox creates from Z=0 to Z=height, so we offset by -height/2 to center it.
    */
   applyMachining(piece, machining, dimensions) {
     const { makeBaseBox } = this.r;
@@ -100,8 +103,9 @@ export class ShapePiece {
       ? -dimensions.A / 2 
       : dimensions.A / 2;
     
+    // Center the tool at zCoord
     const tool = makeBaseBox(width, dimensions.C, height)
-      .translate([xCoord, 0, machining.coordinates[1]]);
+      .translate([xCoord, 0, machining.coordinates[1] - height / 2]);
     
     return piece.cut(tool);
   }
@@ -208,6 +212,12 @@ export class EShape extends ShapePiece {
     return piece.translate([0, 0, -dimensions.B]);
   }
 
+  /**
+   * Apply machining (gap) to the core piece.
+   * 
+   * Note: machining.coordinates[1] is the CENTER of the gap (like Python/CadQuery convention).
+   * replicad's makeBaseBox creates from Z=0 to Z=height, so we offset by -height/2 to center it.
+   */
   applyMachining(piece, machining, dimensions) {
     const { makeBaseBox } = this.r;
     
@@ -237,8 +247,9 @@ export class EShape extends ShapePiece {
     const height = machining.length;
     const zCoord = machining.coordinates[1];
     
+    // makeBaseBox creates from Z=0 to Z=height, translate to center at zCoord
     let tool = makeBaseBox(width, length, height)
-      .translate([xCoord, yCoord, zCoord]);
+      .translate([xCoord, yCoord, zCoord - height / 2]);
     
     // For side columns, subtract central column area
     if (machining.coordinates[0] !== 0) {
@@ -249,10 +260,9 @@ export class EShape extends ShapePiece {
         centralLength = (dimensions.C - dimensions.K * 2) * 1.001;
       }
       
-      // Note: replicad's makeBaseBox starts at Z=0 (not centered)
-      // So translate to same zCoord as the main tool
+      // Center the central tool at zCoord as well
       const centralTool = makeBaseBox(centralWidth, centralLength, height)
-        .translate([0, 0, zCoord]);
+        .translate([0, 0, zCoord - height / 2]);
       
       tool = tool.cut(centralTool);
     }
@@ -299,6 +309,50 @@ export class ERShape extends EShape {
     }
     
     return windingWindow;
+  }
+
+  /**
+   * Apply machining (gap) to the core piece.
+   * For round-center cores (ER, ETD), use a cylinder for central column machining.
+   * 
+   * Note: machining.coordinates[1] is the CENTER of the gap (like Python/CadQuery convention).
+   * replicad's makeCylinder creates from Z=0 to Z=height, so we offset by -height/2 to center it.
+   */
+  applyMachining(piece, machining, dimensions) {
+    const { makeBaseBox, makeCylinder } = this.r;
+    
+    const height = machining.length;
+    const zCoord = machining.coordinates[1];
+    
+    if (machining.coordinates[0] === 0) {
+      // Central column machining - use cylinder for round column
+      // Cylinder is created from Z=0 to Z=height, translate to center at zCoord
+      const radius = dimensions.F / 2;
+      const tool = makeCylinder(radius, height)
+        .translate([0, 0, zCoord - height / 2]);
+      
+      return piece.cut(tool);
+    } else {
+      // Side column machining - use rectangular tool
+      // makeBaseBox creates from Z=0 to Z=height, translate to center at zCoord
+      const width = dimensions.A / 2;
+      const length = dimensions.C;
+      const xCoord = machining.coordinates[0] < 0 
+        ? -dimensions.A / 2 
+        : dimensions.A / 2;
+      
+      let tool = makeBaseBox(width, length, height)
+        .translate([xCoord, 0, zCoord - height / 2]);
+      
+      // Subtract central column area (use cylinder since center is round)
+      const centralRadius = (dimensions.F / 2) * 1.001;
+      const centralTool = makeCylinder(centralRadius, height)
+        .translate([0, 0, zCoord - height / 2]);
+      
+      tool = tool.cut(centralTool);
+      
+      return piece.cut(tool);
+    }
   }
 }
 
@@ -793,12 +847,20 @@ export class UShape extends ShapePiece {
     return piece.translate([0, 0, -dimensions.B]);
   }
 
+  /**
+   * Apply machining for U shape.
+   * Note: machining.coordinates[1] is the CENTER of the gap.
+   * replicad's makeBaseBox creates from Z=0 to Z=height, so we offset by -height/2 to center it.
+   */
   applyMachining(piece, machining, dimensions) {
     const { makeBaseBox } = this.r;
     const windingColumnWidth = (dimensions.A - dimensions.E) / 2;
+    const height = machining.length;
     
-    const gap = makeBaseBox(windingColumnWidth, dimensions.C, machining.length)
-      .translate(convertAxis(machining.coordinates));
+    // Convert coordinates and apply centering offset
+    const coords = convertAxis(machining.coordinates);
+    const gap = makeBaseBox(windingColumnWidth, dimensions.C, height)
+      .translate([coords[0], coords[1], coords[2] - height / 2]);
     
     return piece.cut(gap);
   }
@@ -1029,6 +1091,9 @@ export class PShape extends ShapePiece {
   /**
    * Apply machining (gap cutting) for P shapes.
    * P shapes have round central columns, so we need proper central column handling.
+   * 
+   * Note: machining.coordinates[1] is the CENTER of the gap (like Python/CadQuery convention).
+   * replicad's makeBaseBox creates from Z=0 to Z=height, so we offset by -height/2 to center it.
    */
   applyMachining(piece, machining, dimensions) {
     const { makeBaseBox } = this.r;
@@ -1040,8 +1105,9 @@ export class PShape extends ShapePiece {
       const length = dimensions.F;
       const height = machining.length;
       
+      // Center the tool at zCoord
       const tool = makeBaseBox(width, length, height)
-        .translate([0, 0, machining.coordinates[1]]);
+        .translate([0, 0, machining.coordinates[1] - height / 2]);
       
       return piece.cut(tool);
     } else {
@@ -1053,8 +1119,9 @@ export class PShape extends ShapePiece {
         ? -dimensions.A / 2 
         : dimensions.A / 2;
       
+      // Center the tool at zCoord
       const tool = makeBaseBox(width, dimensions.A, height)
-        .translate([xCoord, 0, machining.coordinates[1]]);
+        .translate([xCoord, 0, machining.coordinates[1] - height / 2]);
       
       return piece.cut(tool);
     }
@@ -1453,18 +1520,9 @@ export function getCore(replicad, geometricalDescription) {
   for (let index = 0; index < geometricalDescription.length; index++) {
     const part = geometricalDescription[index];
     
+    // Skip spacers - they are built separately via getSpacers()
     if (part.type === 'spacer') {
-      // Create spacer box
-      // MAS dimensions: [width, height, depth]
-      // Replicad makeBaseBox: (xLength, yLength, zLength)
-      // After coordinate conversion: X=radial, Y=depth, Z=height
-      const spacer = makeBaseBox(
-        part.dimensions[0],  // width → xLength
-        part.dimensions[2],  // depth → yLength  
-        part.dimensions[1]   // height (thickness) → zLength
-      ).translate(convertAxis(part.coordinates));
-      
-      pieces.push(spacer);
+      continue;
     } else if (part.type === 'half set' || part.type === 'toroidal') {
       // Create shape piece
       const shapeData = { ...part.shape };
@@ -1538,4 +1596,54 @@ export function getCore(replicad, geometricalDescription) {
  */
 export function getSupportedFamilies() {
   return Object.keys(SHAPE_FAMILIES);
+}
+
+/**
+ * Build spacer geometries from the core geometrical description.
+ * Spacers are built separately so they can be rendered with a different color.
+ * @param {Object} replicad - Replicad module
+ * @param {Array} geometricalDescription - Array of core parts
+ * @returns {Object|null} - Combined spacer shape or null if no spacers
+ */
+export function getSpacers(replicad, geometricalDescription) {
+  const { makeBaseBox } = replicad;
+  let spacers = [];
+  
+  for (let index = 0; index < geometricalDescription.length; index++) {
+    const part = geometricalDescription[index];
+    
+    if (part.type === 'spacer') {
+      // Create spacer box
+      // MAS dimensions: [width, height, depth]
+      // Replicad makeBaseBox: (xLength, yLength, zLength)
+      // After coordinate conversion: X=radial, Y=depth, Z=height
+      // Note: makeBaseBox creates box from Z=0 to Z=height, not centered
+      // So we need to offset by -height/2 in Z to center it at the gap coordinates
+      const spacerHeight = part.dimensions[1];
+      const coords = convertAxis(part.coordinates);
+      const spacer = makeBaseBox(
+        part.dimensions[0],  // width → xLength
+        part.dimensions[2],  // depth → yLength  
+        spacerHeight         // height (thickness) → zLength
+      ).translate([coords[0], coords[1], coords[2] - spacerHeight / 2]);
+      
+      spacers.push(spacer);
+    }
+  }
+  
+  // Combine all spacers
+  if (spacers.length === 0) {
+    return null;
+  }
+  
+  let result = spacers[0];
+  for (let i = 1; i < spacers.length; i++) {
+    result = result.fuse(spacers[i]);
+  }
+  
+  // Scale from meters to mm (SCALE = 1000)
+  const SCALE = 1000;
+  result = result.scale(SCALE);
+  
+  return result;
 }

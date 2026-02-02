@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Bug Rectangular Wire Test</title>
+  <style>
+    body { font-family: monospace; padding: 20px; }
+    .pass { color: green; }
+    .fail { color: red; }
+    pre { background: #f5f5f5; padding: 10px; overflow: auto; }
+  </style>
+</head>
+<body>
+  <h1>Bug Rectangular Wire Test - Oblong Column with Rectangular Wire</h1>
+  <div id="output">Loading...</div>
+  
+  <script type="module">
+    import opencascade from 'replicad-opencascadejs/src/replicad_single.js';
+    import wasmUrl from 'replicad-opencascadejs/src/replicad_single.wasm?url';
+    import * as replicad from 'replicad';
+    import { ReplicadBuilder } from './src/replicadBuilder.js';
+    import { ColumnShape } from './src/types.js';
+    
+    const output = document.getElementById('output');
+    
+    function log(msg, className = '') {
+      const div = document.createElement('div');
+      div.className = className;
+      div.textContent = msg;
+      output.appendChild(div);
+    }
+    
+    async function runTests() {
+      output.innerHTML = '';
+      log('=== Bug Rectangular Wire Test ===');
+      log('');
+      
+      // Load test data
+      const response = await fetch('./tests/testData/bug_rectangular_wires_toroidal.json');
+      const testData = await response.json();
+      
+      const bobbin = testData.magnetic.coil.bobbin.processedDescription;
+      const turnsDescription = testData.magnetic.coil.turnsDescription;
+      const wire = testData.magnetic.coil.functionalDescription[0].wire;
+      
+      log('Bobbin data:');
+      log(`  columnShape: ${bobbin.columnShape}`);
+      log(`  columnDepth: ${bobbin.columnDepth}`);
+      log(`  columnWidth: ${bobbin.columnWidth}`);
+      log('');
+      
+      log('Wire data:');
+      log(`  type: ${wire.type}`);
+      log(`  outerWidth: ${wire.outerWidth?.nominal}`);
+      log(`  outerHeight: ${wire.outerHeight?.nominal}`);
+      log('');
+      
+      log(`Turns: ${turnsDescription.length} turns`);
+      if (turnsDescription.length > 0) {
+        const turn0 = turnsDescription[0];
+        log(`  Turn 0:`);
+        log(`    coordinates: [${turn0.coordinates.join(', ')}]`);
+        log(`    dimensions: [${turn0.dimensions.join(', ')}]`);
+        log(`    crossSectionalShape: ${turn0.crossSectionalShape}`);
+      }
+      log('');
+      
+      // Initialize OpenCASCADE
+      log('Loading OpenCASCADE...');
+      try {
+        const OC = await opencascade({ locateFile: () => wasmUrl });
+        replicad.setOC(OC);
+        log('OpenCASCADE loaded successfully', 'pass');
+      } catch (err) {
+        log(`Failed to load OpenCASCADE: ${err.message}`, 'fail');
+        return;
+      }
+      log('');
+      
+      const builder = new ReplicadBuilder(replicad);
+      
+      // Test getBobbin
+      log('Testing getBobbin...');
+      try {
+        const bobbinShape = builder.getBobbin(bobbin);
+        if (bobbinShape) {
+          log('  ✓ Bobbin created successfully', 'pass');
+        } else {
+          log('  ✗ Bobbin shape is null/undefined', 'fail');
+        }
+      } catch (err) {
+        log(`  ✗ getBobbin failed: ${err.message}`, 'fail');
+        console.error(err);
+      }
+      log('');
+      
+      // Test getTurn - this is where the rectangular wire fix should be visible
+      log('Testing getTurn with rectangular wire...');
+      try {
+        const turnShapes = [];
+        for (const turn of turnsDescription) {
+          const turnShape = builder.getTurn(turn, wire, bobbin);
+          turnShapes.push(turnShape);
+        }
+        if (turnShapes && turnShapes.length > 0) {
+          log(`  ✓ Created ${turnShapes.length} turns successfully`, 'pass');
+          
+          // Export one turn to STL and check for vertex patterns
+          const stlOptions = { tolerance: 0.5, angularTolerance: 0.5, binary: false };
+          const stl = turnShapes[0].blobSTL(stlOptions);
+          const stlText = await stl.text();
+          const lines = stlText.split('\n');
+          const vertexLines = lines.filter(l => l.trim().startsWith('vertex'));
+          log(`  Turn 0 STL has ${vertexLines.length} vertices`);
+          
+          // Check if the geometry looks rectangular (not circular)
+          // Rectangular shapes should have more planar faces
+          const facetCount = (stlText.match(/facet normal/g) || []).length;
+          log(`  Turn 0 STL has ${facetCount} facets`);
+          
+          if (facetCount > 0) {
+            log('  ✓ Turn geometry generated with facets', 'pass');
+          }
+          
+          // Log first few vertices for inspection
+          log('  First 10 vertices:');
+          for (let i = 0; i < Math.min(10, vertexLines.length); i++) {
+            log(`    ${vertexLines[i].trim()}`);
+          }
+          
+          // Analyze unique Z values to verify rectangular cross-section
+          const zValues = vertexLines.map(l => {
+            const parts = l.trim().split(/\s+/);
+            return parseFloat(parts[3]);
+          });
+          const uniqueZ = [...new Set(zValues.map(z => z.toFixed(4)))].sort((a,b) => parseFloat(a) - parseFloat(b));
+          log(`  Unique Z values (${uniqueZ.length} distinct):`);
+          for (const z of uniqueZ) {
+            log(`    Z = ${z} mm`);
+          }
+          const expectedZCount = 2; // rectangular cross section should have 2 Z levels
+          if (uniqueZ.length <= 4) {
+            log(`  ✓ Rectangular cross-section verified (2-4 Z levels expected)`, 'pass');
+          } else {
+            log(`  ⚠ More Z levels than expected (${uniqueZ.length}), may indicate round cross-section`, 'fail');
+          }
+        } else {
+          log('  ✗ Turn shapes array is empty or null', 'fail');
+        }
+      } catch (err) {
+        log(`  ✗ getTurn failed: ${err.message}`, 'fail');
+        console.error(err);
+      }
+      log('');
+      
+      // Export all turns to STL file for visual inspection
+      log('Exporting all turns to STL for visual inspection...');
+      try {
+        const { makeCompound } = replicad;
+        const turnShapes = [];
+        for (const turn of turnsDescription) {
+          const turnShape = builder.getTurn(turn, wire, bobbin);
+          turnShapes.push(turnShape);
+        }
+        const allTurns = makeCompound(turnShapes);
+        
+        const stlOptions = { tolerance: 0.1, angularTolerance: 0.1, binary: false };
+        const stl = allTurns.blobSTL(stlOptions);
+        const stlText = await stl.text();
+        
+        // Create download link
+        const blob = new Blob([stlText], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'rectangular_wire_test.stl';
+        a.textContent = 'Download STL';
+        a.style.display = 'block';
+        a.style.margin = '10px 0';
+        output.appendChild(a);
+        
+        log('  ✓ STL file ready for download', 'pass');
+      } catch (err) {
+        log(`  ✗ STL export failed: ${err.message}`, 'fail');
+        console.error(err);
+      }
+      
+      log('');
+      log('=== Tests Complete ===');
+      console.log('TEST_COMPLETE');
+    }
+    
+    runTests();
+  </script>
+</body>
+</html>

@@ -15,7 +15,7 @@ import {
   convertAxis
 } from './types.js';
 
-import { getCore, getSupportedFamilies } from './coreShapes.js';
+import { getCore, getSpacers, getSupportedFamilies } from './coreShapes.js';
 
 // ==========================================================================
 // Global Configuration
@@ -93,8 +93,17 @@ export class ReplicadBuilder {
    */
   getTurn(turnDescription, wireDescription, bobbinDescription, isToroidal = false) {
     // Check for toroidal: either explicit flag or bobbin has windingWindowAngle defined
-    const hasWindingWindowAngle = bobbinDescription.windingWindowAngle !== undefined && 
-                                   bobbinDescription.windingWindowAngle !== null;
+    // Handle both processed (windingWindowAngle at top level) and raw JSON (windingWindows[0].angle)
+    let windingWindowAngle = bobbinDescription.windingWindowAngle;
+    if (windingWindowAngle === undefined || windingWindowAngle === null) {
+      // Try to get from windingWindows array
+      const ww = bobbinDescription.windingWindows?.[0];
+      if (ww && ww.angle !== undefined && ww.angle !== null) {
+        windingWindowAngle = ww.angle;
+      }
+    }
+    const hasWindingWindowAngle = windingWindowAngle !== undefined && windingWindowAngle !== null;
+    
     if (isToroidal || hasWindingWindowAngle) {
       return this._createToroidalTurn(turnDescription, wireDescription, bobbinDescription);
     } else {
@@ -111,20 +120,48 @@ export class ReplicadBuilder {
     const SCALE = this.SCALE;
 
     // Get wire dimensions
-    const isRectangularWire = wireDescription.wireType === WireType.RECTANGULAR;
+    // Rectangular cross-section can come from:
+    // 1. wireDescription.wireType === 'rectangular'
+    // 2. wireDescription.type === 'rectangular' or 'planar' (planar wire has rectangular cross-section)
+    // 3. turnDescription.crossSectionalShape === 'rectangular'
+    const turnCrossSection = turnDescription.crossSectionalShape?.toLowerCase();
+    const isRectangularWire = wireDescription.wireType === WireType.RECTANGULAR || 
+                               wireDescription.type === WireType.RECTANGULAR ||
+                               wireDescription.type === 'rectangular' ||
+                               wireDescription.wireType === 'rectangular' ||
+                               wireDescription.type === 'planar' ||
+                               wireDescription.wireType === 'planar' ||
+                               turnCrossSection === 'rectangular';
+    
+    console.debug('[MVB] _createConcentricTurn:', {
+      'wireDescription.type': wireDescription.type,
+      'turnDescription.crossSectionalShape': turnDescription.crossSectionalShape,
+      'isRectangularWire': isRectangularWire
+    });
+    
     let wireWidth, wireHeight, wireRadius;
+    
+    // Helper to extract value from MAS-style objects (e.g., { nominal: 0.001 }) or plain numbers
+    const getNumericValue = (val) => {
+      if (typeof val === 'number') return val;
+      if (val && typeof val.nominal === 'number') return val.nominal;
+      return null;
+    };
     
     if (isRectangularWire) {
       if (turnDescription.dimensions && turnDescription.dimensions.length >= 2) {
         wireWidth = turnDescription.dimensions[0] * SCALE;
         wireHeight = turnDescription.dimensions[1] * SCALE;
       } else {
-        wireWidth = (wireDescription.outerWidth || wireDescription.conductingWidth || 0.001) * SCALE;
-        wireHeight = (wireDescription.outerHeight || wireDescription.conductingHeight || 0.001) * SCALE;
+        const ow = getNumericValue(wireDescription.outerWidth) || getNumericValue(wireDescription.conductingWidth) || 0.001;
+        const oh = getNumericValue(wireDescription.outerHeight) || getNumericValue(wireDescription.conductingHeight) || 0.001;
+        wireWidth = ow * SCALE;
+        wireHeight = oh * SCALE;
       }
       wireRadius = Math.min(wireWidth, wireHeight) / 2.0;
     } else {
-      const wireDiameter = (wireDescription.outerDiameter || wireDescription.conductingDiameter || 0.001) * SCALE;
+      const od = getNumericValue(wireDescription.outerDiameter) || getNumericValue(wireDescription.conductingDiameter) || 0.001;
+      const wireDiameter = od * SCALE;
       wireRadius = wireDiameter / 2.0;
       wireWidth = wireDiameter;
       wireHeight = wireDiameter;
@@ -160,12 +197,8 @@ export class ReplicadBuilder {
       const turnRadius = radialPos;
 
       if (isRectangularWire) {
-        // For rectangular wire on round column, we use a simplified approach:
-        // Create a torus-like shape using revolution of a rectangle
-        // For now, approximate with torus (will be refined in future)
-        console.warn('Rectangular wire on round column: using approximate geometry');
-        const effectiveRadius = Math.min(wireWidth, wireHeight) / 2;
-        turn = this._makeTorus(turnRadius, effectiveRadius, [0, 0, heightPos], [0, 0, 1]);
+        // For rectangular wire on round column, use full swept rectangle (360° revolution)
+        turn = this._makeFullSweptRectangle(turnRadius, wireWidth, wireHeight, [0, 0, heightPos]);
       } else {
         // Torus for round wire
         turn = this._makeTorus(turnRadius, wireRadius, [0, 0, heightPos], [0, 0, 1]);
@@ -220,25 +253,35 @@ export class ReplicadBuilder {
         // This ensures multilayer turns are correctly positioned at different radial distances.
         const halfTorusMajorRadius = radialPos;
         
-        // Create half torus (180°) for the semicircular ends
-        const createHalfTorus = (centerY, startAngleDeg) => {
-          return this._makeHalfTorus(
-            halfTorusMajorRadius,
-            wireRadius,
-            [0, centerY, heightPos],
-            startAngleDeg
-          );
+        // Create half torus/swept rectangle (180°) for the semicircular ends
+        const createHalfArc = (centerY, startAngleDeg) => {
+          if (isRectangularWire) {
+            return this._makeHalfSweptRectangle(
+              halfTorusMajorRadius,
+              wireWidth,
+              wireHeight,
+              [0, centerY, heightPos],
+              startAngleDeg
+            );
+          } else {
+            return this._makeHalfTorus(
+              halfTorusMajorRadius,
+              wireRadius,
+              [0, centerY, heightPos],
+              startAngleDeg
+            );
+          }
         };
 
         // +Y semicircle: center at Y = +straightSectionHalfLength
         // Wire comes from +X side, goes around to -X side
         // Start angle 0 (pointing +X), sweep 180° to end at 180° (pointing -X)
-        pieces.push(createHalfTorus(+straightSectionHalfLength, 0));
+        pieces.push(createHalfArc(+straightSectionHalfLength, 0));
         
         // -Y semicircle: center at Y = -straightSectionHalfLength  
         // Wire comes from -X side, goes around to +X side
         // Start angle 180 (pointing -X), sweep 180° to end at 0° (pointing +X)
-        pieces.push(createHalfTorus(-straightSectionHalfLength, 180));
+        pieces.push(createHalfArc(-straightSectionHalfLength, 180));
 
         turn = makeCompound(pieces);
       }
@@ -300,15 +343,25 @@ export class ReplicadBuilder {
       // -Y side tube (along X, at Y = -wireYPos)
       pieces.push(createTubeAlongX(tubeXLength, -wireYPos));
 
-      // Four corners (quarter tori)
+      // Four corners (quarter tori or swept rectangles)
       // Corners are at the intersection of column edges
       const createCorner = (cornerX, cornerY, startAngleDeg) => {
-        return this._makeQuarterTorus(
-          turnTurnRadius,
-          wireRadius,
-          [cornerX, cornerY, heightPos],
-          startAngleDeg
-        );
+        if (isRectangularWire) {
+          return this._makeQuarterSweptRectangle(
+            turnTurnRadius,
+            wireWidth,
+            wireHeight,
+            [cornerX, cornerY, heightPos],
+            startAngleDeg
+          );
+        } else {
+          return this._makeQuarterTorus(
+            turnTurnRadius,
+            wireRadius,
+            [cornerX, cornerY, heightPos],
+            startAngleDeg
+          );
+        }
       };
 
       // Corners at (±halfColWidth, ±halfColDepth)
@@ -333,71 +386,116 @@ export class ReplicadBuilder {
     const SCALE = this.SCALE;
 
     // Determine wire type and dimensions
-    const isRectangularWire = wireDescription.wireType === WireType.RECTANGULAR;
+    // Rectangular cross-section can come from:
+    // 1. wireDescription.wireType === 'rectangular'
+    // 2. wireDescription.type === 'rectangular' or 'planar' (planar wire has rectangular cross-section)
+    // 3. turnDescription.crossSectionalShape === 'rectangular'
+    const turnCrossSection = turnDescription.crossSectionalShape?.toLowerCase();
+    const isRectangularWire = wireDescription.wireType === WireType.RECTANGULAR || 
+                               wireDescription.type === WireType.RECTANGULAR ||
+                               wireDescription.type === 'rectangular' ||
+                               wireDescription.wireType === 'rectangular' ||
+                               wireDescription.type === 'planar' ||
+                               wireDescription.wireType === 'planar' ||
+                               turnCrossSection === 'rectangular';
+    
+    console.debug('[MVB] _createToroidalTurn:', {
+      'wireDescription.type': wireDescription.type,
+      'turnDescription.crossSectionalShape': turnDescription.crossSectionalShape,
+      'isRectangularWire': isRectangularWire
+    });
+    
     let wireWidth, wireHeight, wireRadius;
+    
+    // Helper to extract value from MAS-style objects (e.g., { nominal: 0.001 }) or plain numbers
+    const getNumericValue = (val) => {
+      if (typeof val === 'number') return val;
+      if (val && typeof val.nominal === 'number') return val.nominal;
+      return null;
+    };
 
     if (isRectangularWire) {
       if (turnDescription.dimensions && turnDescription.dimensions.length >= 2) {
         wireWidth = turnDescription.dimensions[0] * SCALE;
         wireHeight = turnDescription.dimensions[1] * SCALE;
       } else {
-        wireWidth = (wireDescription.outerWidth || wireDescription.conductingWidth || 0.001) * SCALE;
-        wireHeight = (wireDescription.outerHeight || wireDescription.conductingHeight || 0.001) * SCALE;
+        const ow = getNumericValue(wireDescription.outerWidth) || getNumericValue(wireDescription.conductingWidth) || 0.001;
+        const oh = getNumericValue(wireDescription.outerHeight) || getNumericValue(wireDescription.conductingHeight) || 0.001;
+        wireWidth = ow * SCALE;
+        wireHeight = oh * SCALE;
       }
       wireRadius = Math.min(wireWidth, wireHeight) / 2.0;
     } else {
-      const wireDiameter = (wireDescription.outerDiameter || wireDescription.conductingDiameter || 0.001) * SCALE;
+      const od = getNumericValue(wireDescription.outerDiameter) || getNumericValue(wireDescription.conductingDiameter) || 0.001;
+      const wireDiameter = od * SCALE;
       wireRadius = wireDiameter / 2.0;
       wireWidth = wireDiameter;
       wireHeight = wireDiameter;
     }
 
-    // Get bobbin dimensions
+    // Get bobbin dimensions - handle both processed and raw JSON format
     const halfDepth = bobbinDescription.columnDepth * SCALE;
+    
+    // Get windingWindowRadialHeight from either top level or first winding window
+    let windingWindowRadialHeight = bobbinDescription.windingWindowRadialHeight;
+    if (windingWindowRadialHeight === undefined || windingWindowRadialHeight === null) {
+      const ww = bobbinDescription.windingWindows?.[0];
+      if (ww && ww.radialHeight !== undefined) {
+        windingWindowRadialHeight = ww.radialHeight;
+      }
+    }
+    windingWindowRadialHeight = windingWindowRadialHeight || 0.003;
 
     // Bend radius
     const bendRadius = isRectangularWire 
       ? Math.max(wireWidth, wireHeight) / 2.0 
       : wireRadius;
 
-    // Get turn's angular position
+    // Get turn's angular position (rotation around the torus)
     const turnAngleDeg = turnDescription.rotation;
 
-    // Get inner wire position from coordinates
+    // For toroidal cores, coordinates are Cartesian [x, y] representing the wire position
+    // The radial distance from center is sqrt(x² + y²)
     const coords = turnDescription.coordinates;
     let innerRadial, innerAngleDeg;
-    if (coords.length >= 2) {
+    if (coords && coords.length >= 2) {
       innerRadial = Math.sqrt(coords[0] ** 2 + coords[1] ** 2) * SCALE;
       innerAngleDeg = (180.0 / Math.PI) * Math.atan2(coords[1], coords[0]);
+    } else if (coords && coords.length >= 1) {
+      innerRadial = Math.abs(coords[0]) * SCALE;
+      innerAngleDeg = turnAngleDeg;
     } else {
       innerRadial = 5.0;
       innerAngleDeg = turnAngleDeg;
     }
 
-    // Get outer wire position from additionalCoordinates
+    // Get outer wire position from additionalCoordinates - also Cartesian [x, y]
     const addCoords = turnDescription.additionalCoordinates;
     let outerRadial, outerAngleDeg;
     if (addCoords && addCoords.length > 0) {
       const ac = addCoords[0];
-      if (ac.length >= 2) {
+      if (ac && ac.length >= 2) {
         outerRadial = Math.sqrt(ac[0] ** 2 + ac[1] ** 2) * SCALE;
         outerAngleDeg = (180.0 / Math.PI) * Math.atan2(ac[1], ac[0]);
+      } else if (ac && ac.length >= 1) {
+        outerRadial = Math.abs(ac[0]) * SCALE;
+        outerAngleDeg = innerAngleDeg;
       } else {
-        outerRadial = innerRadial + (bobbinDescription.windingWindowRadialHeight || 0.003) * SCALE;
+        outerRadial = innerRadial + windingWindowRadialHeight * SCALE;
         outerAngleDeg = innerAngleDeg;
       }
     } else {
-      outerRadial = innerRadial + (bobbinDescription.windingWindowRadialHeight || 0.003) * SCALE;
+      outerRadial = innerRadial + windingWindowRadialHeight * SCALE;
       outerAngleDeg = innerAngleDeg;
     }
 
-    // Calculate angle difference
+    // Calculate angle difference between inner and outer wire positions
     const angleDiffDeg = outerAngleDeg - innerAngleDeg;
 
-    // Inner wire at -inner_radial on X axis
+    // Inner wire at -inner_radial on X axis (will be rotated later)
     const innerX = -innerRadial;
 
-    // Calculate rotation from default position
+    // Calculate rotation from default position (geometry starts at -X, so offset by 180°)
     const turnRotationDeg = turnAngleDeg - 180.0;
 
     // Radial distance between inner and outer
@@ -405,21 +503,133 @@ export class ReplicadBuilder {
 
     // Clearances
     const baseClearance = wireRadius;
-    const coreInternalRadius = bobbinDescription.windingWindowRadialHeight * SCALE;
+    const coreInternalRadius = windingWindowRadialHeight * SCALE;
     const layerClearance = coreInternalRadius - innerRadial;
 
     // Radial segment position
     const radialHeight = halfDepth + baseClearance + layerClearance;
 
-    // Tube lengths
-    const tubeLength = radialHeight - bendRadius;
+    // Tube lengths (ensure positive)
+    const tubeLength = Math.max(0.1, radialHeight - bendRadius);
 
     // Radial segment length
-    const radialLength = radialDistance - 2 * bendRadius;
+    // Ensure it's not negative (which would create invalid geometry)
+    const radialLength = Math.max(0.1, radialDistance - 2 * bendRadius);
+    
+    console.log('[MVB] ToroidalTurn: innerRadial=' + innerRadial.toFixed(2) + 
+                ', outerRadial=' + outerRadial.toFixed(2) + 
+                ', radialDistance=' + radialDistance.toFixed(2) +
+                ', turnRotationDeg=' + turnRotationDeg.toFixed(1));
+    console.debug('[MVB] _createToroidalTurn geometry:', {
+      innerRadial, outerRadial, radialDistance,
+      halfDepth, bendRadius, radialHeight,
+      tubeLength, radialLength,
+      wireWidth, wireHeight
+    });
 
-    // Build geometry
-    const pieces = [];
+    // For rectangular wires in toroidal configuration:
+    // The turn wraps AROUND the toroidal core's circular cross-section.
+    // 
+    // Coordinate system:
+    // - Y axis goes through the toroid hole (the toroid's axis of revolution)
+    // - X is radial distance from center (negative X = toward outer edge)
+    // - Z is vertical (perpendicular to core surface)
+    //
+    // The wire lies flat on the core surface, so the wire cross-section is:
+    // - wireWidth: the wider dimension, tangent to the core surface
+    // - wireHeight: the thinner dimension, perpendicular to core surface (in Z)
+    //
+    // Turn components:
+    // - Inner/outer tubes: run along Y (through the hole), cross-section wireWidth(X) × wireHeight(Z)
+    // - Radial segments: run along X (top/bottom), cross-section wireWidth(Y) × wireHeight(Z)
+    // - 4 corners: quarter swept rectangles connecting tubes to radials
+    //
+    // This is similar to concentric rectangular turns, just laid out radially around the core.
+    if (isRectangularWire) {
+      const pieces = [];
+      
+      // Calculate positions
+      // Inner tube at X = innerX, Outer tube at X = innerX - radialDistance
+      const outerX = innerX - radialDistance;
+      
+      // Build both halves (+Y and -Y)
+      const buildRectHalf = (ySign) => {
+        const halfPieces = [];
+        
+        // 1. Inner tube (along Y) - from Y=0 toward ±Y
+        // Box dimensions: wireWidth (X) × tubeLength (Y) × wireHeight (Z)
+        const innerTube = this._makeBox(wireWidth, tubeLength, wireHeight)
+          .translate([innerX, (tubeLength / 2) * ySign, 0]);
+        halfPieces.push(innerTube);
+        
+        // 2. Inner corner - quarter swept rectangle
+        // Corner center at (innerX - bendRadius, tubeLength * ySign, 0)
+        // From corner center perspective:
+        //   - Tube connection is at +X direction (angle 0°)
+        //   - Radial connection is at +Y for +Y half (angle 90°), -Y for -Y half (angle 270°)
+        // Always start at 0° (tube end), sweep toward radial
+        const innerCornerCenter = [innerX - bendRadius, tubeLength * ySign, 0];
+        const innerCornerStartAngle = 0;  // Always start at tube connection (+X)
+        const innerCorner = this._makeToroidalQuarterSweptRectangle(
+          bendRadius, wireWidth, wireHeight,
+          innerCornerCenter, innerCornerStartAngle, ySign
+        );
+        halfPieces.push(innerCorner);
+        
+        // 3. Radial segment - runs along X from inner corner to outer corner
+        // At Y = radialHeight (top/bottom of core)
+        // Box dimensions: radialLength (X) × wireWidth (Y) × wireHeight (Z)
+        const radialTube = this._makeBox(radialLength, wireWidth, wireHeight)
+          .translate([innerX - bendRadius - radialLength / 2, radialHeight * ySign, 0]);
+        halfPieces.push(radialTube);
+        
+        // 4. Outer corner - quarter swept rectangle
+        // Corner center at (outerX + bendRadius, tubeLength * ySign, 0)
+        // From corner center perspective:
+        //   - Radial connection is at +Y for +Y half (angle 90°), -Y for -Y half (angle 270°)
+        //   - Tube connection is at -X direction (angle 180°)
+        // Start at radial connection, sweep toward tube
+        const outerCornerCenter = [outerX + bendRadius, tubeLength * ySign, 0];
+        const outerCornerStartAngle = ySign > 0 ? 90 : 270;  // Radial connection angle
+        const outerCorner = this._makeToroidalQuarterSweptRectangle(
+          bendRadius, wireWidth, wireHeight,
+          outerCornerCenter, outerCornerStartAngle, ySign
+        );
+        halfPieces.push(outerCorner);
+        
+        // 5. Outer tube (along Y) - from Y=0 toward ±Y
+        const outerTube = this._makeBox(wireWidth, tubeLength, wireHeight)
+          .translate([outerX, (tubeLength / 2) * ySign, 0]);
+        halfPieces.push(outerTube);
+        
+        return halfPieces;
+      };
+      
+      // Build top half (+Y) and bottom half (-Y)
+      pieces.push(...buildRectHalf(+1));
+      pieces.push(...buildRectHalf(-1));
+      
+      console.log('[MVB] ToroidalRectTurn: tubeLength=' + tubeLength.toFixed(2) +
+                  ', radialLength=' + radialLength.toFixed(2) +
+                  ', radialHeight=' + radialHeight.toFixed(2) +
+                  ', bendRadius=' + bendRadius.toFixed(2) +
+                  ', innerX=' + innerX.toFixed(2) +
+                  ', outerX=' + outerX.toFixed(2) +
+                  ', wireWidth=' + wireWidth.toFixed(2) +
+                  ', wireHeight=' + wireHeight.toFixed(2));
+      
+      // Combine all pieces
+      let fullTurn = makeCompound(pieces);
+      
+      // Apply the turn rotation around Y axis (around the toroid center)
+      if (Math.abs(turnRotationDeg) > 0.001) {
+        fullTurn = fullTurn.rotate(turnRotationDeg, [0, 0, 0], [0, 1, 0]);
+      }
+      
+      return fullTurn;
+    }
 
+    // For round wires, use the original complex algorithm with torus corners
     // Helper to create tube
     const createTube = (length, swapDims = false) => {
       if (isRectangularWire) {
@@ -431,101 +641,122 @@ export class ReplicadBuilder {
       }
     };
 
-    // For multilayer turns, the angle difference between inner and outer wires
-    // requires rotating the connecting pieces to align properly.
-    // The radial segment spans from inner to outer, and the inner corner/tube 
-    // on the "top" side need to be tilted to connect with the tilted radial segment.
-    
-    // 1. Inner tube (along Y) - stays at inner position, no angle rotation needed
-    let innerTube = createTube(tubeLength)
-      .rotate(-90, [0, 0, 0], [1, 0, 0])
-      .translate([innerX, 0, 0]);
-    pieces.push(innerTube);
-
-    // 2. Inner corner - needs to connect inner tube to the tilted radial segment
-    //    The corner itself needs to be tilted by angleDiffDeg/2 to smoothly connect
-    let innerCorner = this._makeQuarterTorus(
-      bendRadius,
-      wireRadius,
-      [innerX - bendRadius, tubeLength, 0],
-      0,
-      [0, 0, 1]
-    );
-    // Rotate inner corner by half the angle difference to blend the transition
-    if (Math.abs(angleDiffDeg) > 0.001) {
-      innerCorner = innerCorner.rotate(angleDiffDeg / 2, [innerX, 0, 0], [0, 1, 0]);
-    }
-    pieces.push(innerCorner);
-
-    // 3. Radial segment - tilted by angleDiffDeg to go from inner to outer angle
-    let radialTube = createTube(radialLength, true)
-      .rotate(-90, [0, 0, 0], [0, 1, 0]);
-    // First rotate by half angle (to match inner corner end), then position
-    if (Math.abs(angleDiffDeg) > 0.001) {
-      radialTube = radialTube.rotate(angleDiffDeg / 2, [0, 0, 0], [0, 1, 0]);
-    }
-    radialTube = radialTube.translate([innerX - bendRadius, radialHeight, 0]);
-    // Now rotate around the inner position to reach outer angle
-    if (Math.abs(angleDiffDeg) > 0.001) {
-      radialTube = radialTube.rotate(angleDiffDeg / 2, [innerX, 0, 0], [0, 1, 0]);
-    }
-    pieces.push(radialTube);
-
-    // 4. Outer corner - at the outer position, rotated by full angleDiffDeg
-    let outerCorner = this._makeQuarterTorus(
-      bendRadius,
-      wireRadius,
-      [innerX - radialDistance + bendRadius, tubeLength, 0],
-      90,
-      [0, 0, 1]
-    );
-    if (Math.abs(angleDiffDeg) > 0.001) {
-      outerCorner = outerCorner.rotate(angleDiffDeg, [innerX, 0, 0], [0, 1, 0]);
-    }
-    pieces.push(outerCorner);
-
-    // 5. Outer tube - at the outer position, rotated by full angleDiffDeg
-    let outerTube = createTube(tubeLength)
-      .rotate(-90, [0, 0, 0], [1, 0, 0])
-      .translate([innerX - radialDistance, 0, 0]);
-    if (Math.abs(angleDiffDeg) > 0.001) {
-      outerTube = outerTube.rotate(angleDiffDeg, [innerX, 0, 0], [0, 1, 0]);
-    }
-    pieces.push(outerTube);
-
-    // Combine top half first
-    const topHalf = makeCompound(pieces);
-    
-    // Mirror for bottom half - use scale with -1 on Y axis
-    // In replicad, mirror('XZ') is equivalent to scaling Y by -1
-    let bottomHalf;
-    try {
-      // Try using mirror if available
-      if (typeof topHalf.mirror === 'function') {
-        bottomHalf = topHalf.mirror('XZ');
+    // Helper to create corner (quarter turn)
+    // For rectangular wire: creates a box-based corner
+    // For round wire: creates a quarter torus
+    const createCorner = (center, startAngleDeg, axis) => {
+      if (isRectangularWire) {
+        // For rectangular wire, create a box that fills the corner
+        // The box dimensions match the wire cross-section and bend radius
+        // Position depends on start angle (0, 90, 180, 270)
+        let corner = this._makeBox(wireWidth, wireHeight, bendRadius);
+        
+        // Rotate based on start angle to orient correctly
+        // startAngleDeg determines which quadrant the corner is in
+        if (startAngleDeg === 90 || startAngleDeg === 270) {
+          // Swap X and Z for corners along different axes
+          corner = corner.rotate(90, [0, 0, 0], [0, 1, 0]);
+        }
+        if (startAngleDeg === 180 || startAngleDeg === 270) {
+          corner = corner.rotate(180, [0, 0, 0], [0, 0, 1]);
+        }
+        
+        return corner.translate(center);
       } else {
-        // Fallback: use scale transformation
-        bottomHalf = topHalf.scale(1, -1, 1);
+        return this._makeQuarterTorus(bendRadius, wireRadius, center, startAngleDeg, axis);
       }
-    } catch (e) {
-      // If both fail, build bottom half manually by negating Y in geometry creation
-      console.warn('Toroidal turn mirroring failed, using scale fallback:', e.message);
-      try {
-        bottomHalf = topHalf.scale(1, -1, 1);
-      } catch (e2) {
-        // Last resort: skip bottom half
-        console.error('Could not create bottom half of toroidal turn:', e2.message);
-        bottomHalf = null;
+    };
+
+    // Helper to create corner (quarter arc)
+    // For toroidal turns, corners bend in the XY plane, not around Z like in concentric turns
+    const createToroidalCorner = (position, isInnerCorner, ySign) => {
+      // For toroidal geometry, corners connect vertical tubes to radial segments
+      // The bending happens in the XY plane
+      if (isRectangularWire) {
+        // For rectangular wire, use a box approximation at corners
+        // This avoids the complexity of swept rectangles in non-standard orientations
+        const cornerBox = this._makeBox(wireWidth, wireHeight, bendRadius);
+        // Position the corner box
+        return cornerBox.translate([position[0], position[1], position[2]]);
+      } else {
+        return this._makeQuarterTorus(
+          bendRadius,
+          wireRadius,
+          position,
+          isInnerCorner ? (ySign > 0 ? 0 : 270) : (ySign > 0 ? 90 : 180),
+          [0, 0, 1]
+        );
       }
-    }
-    
-    // Combine top and bottom
-    let fullTurn;
-    if (bottomHalf) {
-      fullTurn = makeCompound([topHalf, bottomHalf]);
-    } else {
-      fullTurn = topHalf;
-    }
+    };
+
+    // Build both halves explicitly to avoid mirror/scale issues with OpenCASCADE
+    // This prevents "object has been deleted" errors
+    const buildHalf = (ySign) => {
+      const halfPieces = [];
+      const yMult = ySign; // +1 for top half, -1 for bottom half
+
+      // 1. Inner tube (along Y) - from center toward ±Y
+      let innerTube = createTube(tubeLength)
+        .rotate(-90 * yMult, [0, 0, 0], [1, 0, 0])
+        .translate([innerX, 0, 0]);
+      halfPieces.push(innerTube);
+
+      // 2. Inner corner - connects inner tube to radial segment
+      let innerCorner = createToroidalCorner(
+        [innerX - bendRadius, tubeLength * yMult, 0],
+        true,
+        ySign
+      );
+      // Rotate inner corner by half the angle difference to blend the transition
+      if (Math.abs(angleDiffDeg) > 0.001) {
+        innerCorner = innerCorner.rotate(angleDiffDeg / 2, [innerX, 0, 0], [0, 1, 0]);
+      }
+      halfPieces.push(innerCorner);
+
+      // 3. Radial segment - tilted by angleDiffDeg to go from inner to outer angle
+      let radialTube = createTube(radialLength, true)
+        .rotate(-90, [0, 0, 0], [0, 1, 0]);
+      // First rotate by half angle (to match inner corner end), then position
+      if (Math.abs(angleDiffDeg) > 0.001) {
+        radialTube = radialTube.rotate(angleDiffDeg / 2, [0, 0, 0], [0, 1, 0]);
+      }
+      radialTube = radialTube.translate([innerX - bendRadius, radialHeight * yMult, 0]);
+      // Now rotate around the inner position to reach outer angle
+      if (Math.abs(angleDiffDeg) > 0.001) {
+        radialTube = radialTube.rotate(angleDiffDeg / 2, [innerX, 0, 0], [0, 1, 0]);
+      }
+      halfPieces.push(radialTube);
+
+      // 4. Outer corner - connects radial segment to outer tube
+      let outerCorner = createToroidalCorner(
+        [innerX - radialDistance + bendRadius, tubeLength * yMult, 0],
+        false,
+        ySign
+      );
+      if (Math.abs(angleDiffDeg) > 0.001) {
+        outerCorner = outerCorner.rotate(angleDiffDeg, [innerX, 0, 0], [0, 1, 0]);
+      }
+      halfPieces.push(outerCorner);
+
+      // 5. Outer tube - at the outer position, rotated by full angleDiffDeg
+      let outerTube = createTube(tubeLength)
+        .rotate(-90 * yMult, [0, 0, 0], [1, 0, 0])
+        .translate([innerX - radialDistance, 0, 0]);
+      if (Math.abs(angleDiffDeg) > 0.001) {
+        outerTube = outerTube.rotate(angleDiffDeg, [innerX, 0, 0], [0, 1, 0]);
+      }
+      halfPieces.push(outerTube);
+
+      return halfPieces;
+    };
+
+    // Build top half (+Y) and bottom half (-Y)
+    const topPieces = buildHalf(+1);
+    const bottomPieces = buildHalf(-1);
+
+    // Combine all pieces
+    const allPieces = [...topPieces, ...bottomPieces];
+    let fullTurn = makeCompound(allPieces);
 
     // Apply rotation
     if (Math.abs(turnRotationDeg) > 0.001) {
@@ -607,24 +838,20 @@ export class ReplicadBuilder {
       // Stadium is oriented with the longer axis along Y
       
       // Outer bobbin shell - still rectangular for simplicity
-      bobbin = this._makeBox(totalWidth * 2, totalDepth * 2, totalHeight)
-        .translate([0, 0, -totalHeight / 2]);
+      bobbin = this._makeBox(totalWidth * 2, totalDepth * 2, totalHeight);
 
       // Create negative winding window
-      const negWw = this._makeBox(totalWidth * 2, totalDepth * 2, wwHeight)
-        .translate([0, 0, -wwHeight / 2]);
+      const negWw = this._makeBox(totalWidth * 2, totalDepth * 2, wwHeight);
       
       // Central column: stadium shape (rectangle + two semicircles)
       // Stadium dimensions: width = colWidth*2 (X), length = colDepth*2 (Y)
       // The semicircle radius = colWidth (half the short dimension)
-      const centralCol = this._makeStadium(colWidth, colDepth, wwHeight)
-        .translate([0, 0, -wwHeight / 2]);
+      const centralCol = this._makeStadium(colWidth, colDepth, wwHeight);
 
       // Central hole (for the core): also stadium shape but smaller
       const innerWidth = colWidth - colThickness;
       const innerDepth = colDepth - colThickness;
-      const centralHole = this._makeStadium(innerWidth, innerDepth, totalHeight)
-        .translate([0, 0, -totalHeight / 2]);
+      const centralHole = this._makeStadium(innerWidth, innerDepth, totalHeight);
 
       const negWwCut = negWw.cut(centralCol);
       bobbin = bobbin.cut(negWwCut);
@@ -641,23 +868,19 @@ export class ReplicadBuilder {
       const rectangularPartDepth = colDepth - semicircleRadius;  // Distance from center to where semicircle starts
       
       // Outer bobbin shell - rectangular
-      bobbin = this._makeBox(totalWidth * 2, totalDepth * 2, totalHeight)
-        .translate([0, 0, -totalHeight / 2]);
+      bobbin = this._makeBox(totalWidth * 2, totalDepth * 2, totalHeight);
 
       // Create negative winding window (rectangular)
-      const negWw = this._makeBox(totalWidth * 2, totalDepth * 2, wwHeight)
-        .translate([0, 0, -wwHeight / 2]);
+      const negWw = this._makeBox(totalWidth * 2, totalDepth * 2, wwHeight);
       
       // Central column: rectangle + semicircle on +Y side (back)
       // Use _makeHalfStadium helper for EPX-style column
-      const centralCol = this._makeHalfStadium(colWidth, colDepth, wwHeight)
-        .translate([0, 0, -wwHeight / 2]);
+      const centralCol = this._makeHalfStadium(colWidth, colDepth, wwHeight);
 
       // Central hole: same shape but smaller
       const innerWidth = colWidth - colThickness;
       const innerDepth = colDepth - colThickness;
-      const centralHole = this._makeHalfStadium(innerWidth, innerDepth, totalHeight)
-        .translate([0, 0, -totalHeight / 2]);
+      const centralHole = this._makeHalfStadium(innerWidth, innerDepth, totalHeight);
 
       const negWwCut = negWw.cut(centralCol);
       bobbin = bobbin.cut(negWwCut);
@@ -667,19 +890,15 @@ export class ReplicadBuilder {
       // _makeBox(width, depth, height) where X=width, Y=depth, Z=height
       // totalWidth is X extent (radial direction)
       // totalDepth is Y extent (depth direction)
-      bobbin = this._makeBox(totalWidth * 2, totalDepth * 2, totalHeight)
-        .translate([0, 0, -totalHeight / 2]);
+      bobbin = this._makeBox(totalWidth * 2, totalDepth * 2, totalHeight);
 
-      const negWw = this._makeBox(totalWidth * 2, totalDepth * 2, wwHeight)
-        .translate([0, 0, -wwHeight / 2]);
+      const negWw = this._makeBox(totalWidth * 2, totalDepth * 2, wwHeight);
       // Central column: X = colWidth * 2, Y = colDepth * 2
-      const centralCol = this._makeBox(colWidth * 2, colDepth * 2, wwHeight)
-        .translate([0, 0, -wwHeight / 2]);
+      const centralCol = this._makeBox(colWidth * 2, colDepth * 2, wwHeight);
 
       const innerWidth = colWidth - colThickness;
       const innerDepth = colDepth - colThickness;
-      const centralHole = this._makeBox(innerWidth * 2, innerDepth * 2, totalHeight)
-        .translate([0, 0, -totalHeight / 2]);
+      const centralHole = this._makeBox(innerWidth * 2, innerDepth * 2, totalHeight);
 
       const negWwCut = negWw.cut(centralCol);
       bobbin = bobbin.cut(negWwCut);
@@ -767,12 +986,28 @@ export class ReplicadBuilder {
       if (turnData.dimensions) {
         const dims = turnData.dimensions;
         if (dims.length >= 2) {
+          // Determine wire type from crossSectionalShape
+          const crossShape = (turnData.crossSectionalShape || '').toLowerCase();
+          const isRectangular = crossShape === 'rectangular' || crossShape === 'foil' || crossShape === 'planar';
+          
+          console.log('[MVB] Creating WireDescription from turnData:', {
+            'turnData.crossSectionalShape': turnData.crossSectionalShape,
+            'crossShape': crossShape,
+            'isRectangular': isRectangular,
+            'dims': dims
+          });
+          
           wireDesc = new WireDescription({
-            wireType: turnData.crossSectionalShape === 'round' ? WireType.ROUND : WireType.RECTANGULAR,
+            type: isRectangular ? WireType.RECTANGULAR : WireType.ROUND,
             outerDiameter: dims[0],
             conductingDiameter: dims[0],
             outerWidth: dims[0],
             outerHeight: dims[1]
+          });
+          
+          console.log('[MVB] Created WireDescription:', {
+            'wireDesc.type': wireDesc.type,
+            'wireDesc.wireType': wireDesc.wireType
           });
         }
       }
@@ -793,14 +1028,15 @@ export class ReplicadBuilder {
 
   /**
    * Create a box centered at origin.
-   * In Replicad, makeBox(width, height, length) creates a box at origin.
-   * We want: X=width, Y=depth, Z=height
+   * makeBaseBox creates a box from Z=0 to Z=height, so we need to offset.
+   * We want: X centered, Y centered, Z centered
    * @private
    */
   _makeBox(width, depth, height) {
     const { makeBaseBox } = this.r;
-    // makeBaseBox creates a centered box with dimensions [width, depth, height]
-    return makeBaseBox(width, depth, height);
+    // makeBaseBox creates box centered in XY but from Z=0 to Z=height
+    // Offset by -height/2 to truly center it
+    return makeBaseBox(width, depth, height).translate([0, 0, -height / 2]);
   }
 
   /**
@@ -823,7 +1059,7 @@ export class ReplicadBuilder {
     
     // If the column is actually round (halfDepth <= halfWidth), just make a cylinder
     if (rectangleHalfLength <= 0) {
-      return makeCylinder(halfWidth, height);
+      return makeCylinder(halfWidth, height, [0, 0, -height/2]);
     }
     
     const pieces = [];
@@ -835,13 +1071,12 @@ export class ReplicadBuilder {
     pieces.push(centralRect);
     
     // +Y semicircle (at Y = +rectangleHalfLength)
-    const semicircleY1 = makeCylinder(semicircleRadius, height)
-      .translate([0, rectangleHalfLength, 0]);
+    // Cylinder centered in Z: from -height/2 to +height/2
+    const semicircleY1 = makeCylinder(semicircleRadius, height, [0, rectangleHalfLength, -height/2]);
     pieces.push(semicircleY1);
     
     // -Y semicircle (at Y = -rectangleHalfLength)
-    const semicircleY2 = makeCylinder(semicircleRadius, height)
-      .translate([0, -rectangleHalfLength, 0]);
+    const semicircleY2 = makeCylinder(semicircleRadius, height, [0, -rectangleHalfLength, -height/2]);
     pieces.push(semicircleY2);
     
     // Fuse all pieces together
@@ -873,7 +1108,7 @@ export class ReplicadBuilder {
     
     // If the shape is actually round (halfDepth <= halfWidth), just make a cylinder
     if (rectangleHalfLength <= 0) {
-      return makeCylinder(halfWidth, height);
+      return makeCylinder(halfWidth, height, [0, 0, -height/2]);
     }
     
     // Central rectangular section
@@ -885,8 +1120,8 @@ export class ReplicadBuilder {
       .translate([0, rectCenterY, 0]);
     
     // +Y semicircle (at Y = +rectangleHalfLength, which is halfDepth - halfWidth from center)
-    const semicircle = makeCylinder(semicircleRadius, height)
-      .translate([0, rectangleHalfLength, 0]);
+    // Cylinder centered in Z
+    const semicircle = makeCylinder(semicircleRadius, height, [0, rectangleHalfLength, -height/2]);
     
     // Fuse rectangle and semicircle
     return centralRect.fuse(semicircle);
@@ -981,6 +1216,242 @@ export class ReplicadBuilder {
   }
 
   /**
+   * Create a quarter swept rectangle for rectangular wire corners.
+   * Sweeps a rectangle profile along a 90° arc.
+   * 
+   * @param {number} majorRadius - Bend radius (distance from corner center to wire center)
+   * @param {number} width - Rectangle width (perpendicular to arc, radial direction)
+   * @param {number} height - Rectangle height (Z direction)
+   * @param {Array} center - [x, y, z] position of arc center
+   * @param {number} startAngleDeg - Starting angle in degrees (0=+X, 90=+Y, etc.)
+   * @private
+   */
+  _makeQuarterSweptRectangle(majorRadius, width, height, center, startAngleDeg) {
+    const { draw, getOC, Solid } = this.r;
+    
+    try {
+      const oc = getOC();
+      const startAngleRad = (startAngleDeg * Math.PI) / 180;
+      
+      // Use OpenCASCADE directly to create a swept rectangle
+      const hw = width / 2;
+      const hh = height / 2;
+      
+      // Create a rectangle face at the starting position
+      // The rectangle is in the XZ plane, centered at (majorRadius, 0, 0)
+      const p1 = new oc.gp_Pnt_3(majorRadius - hw, 0, -hh);
+      const p2 = new oc.gp_Pnt_3(majorRadius + hw, 0, -hh);
+      const p3 = new oc.gp_Pnt_3(majorRadius + hw, 0, hh);
+      const p4 = new oc.gp_Pnt_3(majorRadius - hw, 0, hh);
+      
+      // Create edges
+      const edge1 = new oc.BRepBuilderAPI_MakeEdge_3(p1, p2).Edge();
+      const edge2 = new oc.BRepBuilderAPI_MakeEdge_3(p2, p3).Edge();
+      const edge3 = new oc.BRepBuilderAPI_MakeEdge_3(p3, p4).Edge();
+      const edge4 = new oc.BRepBuilderAPI_MakeEdge_3(p4, p1).Edge();
+      
+      // Create wire from edges
+      const wireMaker = new oc.BRepBuilderAPI_MakeWire_1();
+      wireMaker.Add_1(edge1);
+      wireMaker.Add_1(edge2);
+      wireMaker.Add_1(edge3);
+      wireMaker.Add_1(edge4);
+      const rectWire = wireMaker.Wire();
+      
+      // Create face from wire
+      const faceMaker = new oc.BRepBuilderAPI_MakeFace_15(rectWire, true);
+      const rectFace = faceMaker.Face();
+      
+      // Rotate the face to the start angle
+      let faceToRevolve = rectFace;
+      if (startAngleDeg !== 0) {
+        const axis = new oc.gp_Ax1_2(
+          new oc.gp_Pnt_3(0, 0, 0),
+          new oc.gp_Dir_4(0, 0, 1)
+        );
+        const transform = new oc.gp_Trsf_1();
+        transform.SetRotation_1(axis, startAngleRad);
+        const transformer = new oc.BRepBuilderAPI_Transform_2(rectFace, transform, true);
+        faceToRevolve = oc.TopoDS.Face_1(transformer.Shape());
+      }
+      
+      // Create revolution axis through origin along Z
+      const revolveAxis = new oc.gp_Ax1_2(
+        new oc.gp_Pnt_3(0, 0, 0),
+        new oc.gp_Dir_4(0, 0, 1)
+      );
+      
+      // Revolve 90 degrees
+      const revolver = new oc.BRepPrimAPI_MakeRevol_1(faceToRevolve, revolveAxis, Math.PI / 2, true);
+      const sweptShape = revolver.Shape();
+      
+      const result = new Solid(sweptShape);
+      return result.translate([center[0], center[1], center[2]]);
+    } catch (e) {
+      console.warn('Quarter swept rectangle failed:', e.message, '- using box approximation');
+      // Fallback: use a box approximation at the corner
+      return this._makeBox(width, width, height)
+        .translate([center[0], center[1], center[2]]);
+    }
+  }
+
+  /**
+   * Create a half swept rectangle for rectangular wire on semicircular ends.
+   * Sweeps a rectangle profile along a 180° arc.
+   * 
+   * @param {number} majorRadius - Bend radius (distance from arc center to wire center)
+   * @param {number} width - Rectangle width (perpendicular to arc, radial direction)
+   * @param {number} height - Rectangle height (Z direction)
+   * @param {Array} center - [x, y, z] position of arc center
+   * @param {number} startAngleDeg - Starting angle in degrees (0=+X, 90=+Y, etc.)
+   * @private
+   */
+  _makeHalfSweptRectangle(majorRadius, width, height, center, startAngleDeg) {
+    const { draw, getOC, Solid } = this.r;
+    
+    try {
+      const oc = getOC();
+      const startAngleRad = (startAngleDeg * Math.PI) / 180;
+      
+      // Use OpenCASCADE directly to create a swept rectangle
+      // Create rectangle wire
+      const hw = width / 2;
+      const hh = height / 2;
+      
+      // Create a rectangle face at the starting position
+      // The rectangle is in the XZ plane, centered at (majorRadius, 0, 0)
+      const p1 = new oc.gp_Pnt_3(majorRadius - hw, 0, -hh);
+      const p2 = new oc.gp_Pnt_3(majorRadius + hw, 0, -hh);
+      const p3 = new oc.gp_Pnt_3(majorRadius + hw, 0, hh);
+      const p4 = new oc.gp_Pnt_3(majorRadius - hw, 0, hh);
+      
+      // Create edges
+      const edge1 = new oc.BRepBuilderAPI_MakeEdge_3(p1, p2).Edge();
+      const edge2 = new oc.BRepBuilderAPI_MakeEdge_3(p2, p3).Edge();
+      const edge3 = new oc.BRepBuilderAPI_MakeEdge_3(p3, p4).Edge();
+      const edge4 = new oc.BRepBuilderAPI_MakeEdge_3(p4, p1).Edge();
+      
+      // Create wire from edges
+      const wireMaker = new oc.BRepBuilderAPI_MakeWire_1();
+      wireMaker.Add_1(edge1);
+      wireMaker.Add_1(edge2);
+      wireMaker.Add_1(edge3);
+      wireMaker.Add_1(edge4);
+      const rectWire = wireMaker.Wire();
+      
+      // Create face from wire
+      const faceMaker = new oc.BRepBuilderAPI_MakeFace_15(rectWire, true);
+      const rectFace = faceMaker.Face();
+      
+      // Rotate the face to the start angle
+      if (startAngleDeg !== 0) {
+        const axis = new oc.gp_Ax1_2(
+          new oc.gp_Pnt_3(0, 0, 0),
+          new oc.gp_Dir_4(0, 0, 1)
+        );
+        const transform = new oc.gp_Trsf_1();
+        transform.SetRotation_1(axis, startAngleRad);
+        const transformer = new oc.BRepBuilderAPI_Transform_2(rectFace, transform, true);
+        const rotatedFace = oc.TopoDS.Face_1(transformer.Shape());
+        
+        // Create revolution axis through origin along Z
+        const revolveAxis = new oc.gp_Ax1_2(
+          new oc.gp_Pnt_3(0, 0, 0),
+          new oc.gp_Dir_4(0, 0, 1)
+        );
+        
+        // Revolve 180 degrees
+        const revolver = new oc.BRepPrimAPI_MakeRevol_1(rotatedFace, revolveAxis, Math.PI, true);
+        const sweptShape = revolver.Shape();
+        
+        const result = new Solid(sweptShape);
+        return result.translate([center[0], center[1], center[2]]);
+      } else {
+        // Create revolution axis through origin along Z
+        const revolveAxis = new oc.gp_Ax1_2(
+          new oc.gp_Pnt_3(0, 0, 0),
+          new oc.gp_Dir_4(0, 0, 1)
+        );
+        
+        // Revolve 180 degrees
+        const revolver = new oc.BRepPrimAPI_MakeRevol_1(rectFace, revolveAxis, Math.PI, true);
+        const sweptShape = revolver.Shape();
+        
+        const result = new Solid(sweptShape);
+        return result.translate([center[0], center[1], center[2]]);
+      }
+    } catch (e) {
+      console.warn('Half swept rectangle failed:', e.message, '- using torus approximation');
+      // Fallback: use torus with approximate radius
+      const effectiveRadius = Math.min(width, height) / 2;
+      return this._makeHalfTorus(majorRadius, effectiveRadius, center, startAngleDeg);
+    }
+  }
+
+  /**
+   * Create a full swept rectangle (360°) for rectangular wire on round columns.
+   * Sweeps a rectangle profile along a full circle - like a torus but with rectangular cross-section.
+   * 
+   * @param {number} majorRadius - Bend radius (distance from center to wire center)
+   * @param {number} width - Rectangle width (radial direction)
+   * @param {number} height - Rectangle height (Z direction)
+   * @param {Array} center - [x, y, z] position of center
+   * @private
+   */
+  _makeFullSweptRectangle(majorRadius, width, height, center) {
+    const { getOC, Solid } = this.r;
+    
+    try {
+      const oc = getOC();
+      
+      const hw = width / 2;
+      const hh = height / 2;
+      
+      // Create a rectangle face in the XZ plane, centered at (majorRadius, 0, 0)
+      const p1 = new oc.gp_Pnt_3(majorRadius - hw, 0, -hh);
+      const p2 = new oc.gp_Pnt_3(majorRadius + hw, 0, -hh);
+      const p3 = new oc.gp_Pnt_3(majorRadius + hw, 0, hh);
+      const p4 = new oc.gp_Pnt_3(majorRadius - hw, 0, hh);
+      
+      // Create edges
+      const edge1 = new oc.BRepBuilderAPI_MakeEdge_3(p1, p2).Edge();
+      const edge2 = new oc.BRepBuilderAPI_MakeEdge_3(p2, p3).Edge();
+      const edge3 = new oc.BRepBuilderAPI_MakeEdge_3(p3, p4).Edge();
+      const edge4 = new oc.BRepBuilderAPI_MakeEdge_3(p4, p1).Edge();
+      
+      // Create wire from edges
+      const wireMaker = new oc.BRepBuilderAPI_MakeWire_1();
+      wireMaker.Add_1(edge1);
+      wireMaker.Add_1(edge2);
+      wireMaker.Add_1(edge3);
+      wireMaker.Add_1(edge4);
+      const rectWire = wireMaker.Wire();
+      
+      // Create face from wire
+      const faceMaker = new oc.BRepBuilderAPI_MakeFace_15(rectWire, true);
+      const rectFace = faceMaker.Face();
+      
+      // Create revolution axis through origin along Z
+      const revolveAxis = new oc.gp_Ax1_2(
+        new oc.gp_Pnt_3(0, 0, 0),
+        new oc.gp_Dir_4(0, 0, 1)
+      );
+      
+      // Revolve 360 degrees (2π)
+      const revolver = new oc.BRepPrimAPI_MakeRevol_1(rectFace, revolveAxis, 2 * Math.PI, true);
+      const sweptShape = revolver.Shape();
+      
+      const result = new Solid(sweptShape);
+      return result.translate([center[0], center[1], center[2]]);
+    } catch (e) {
+      console.warn('Full swept rectangle failed:', e.message, '- using torus approximation');
+      // Fallback: use torus with approximate radius
+      const effectiveRadius = Math.min(width, height) / 2;
+      return this._makeTorus(majorRadius, effectiveRadius, center);
+    }
+  }
+
+  /**
    * Create a half torus (180° arc) for semicircular turns around oblong columns.
    * 
    * @param {number} majorRadius - Bend radius (distance from arc center to wire center)
@@ -1023,6 +1494,95 @@ export class ReplicadBuilder {
       // Fallback: use a full torus
       console.warn('Half torus creation failed:', e.message);
       return this._makeTorus(majorRadius, minorRadius, center, axis);
+    }
+  }
+
+  /**
+   * Create a quarter swept rectangle for toroidal rectangular wire corners.
+   * The corner transitions between a tube (along Y) and a radial segment (along X).
+   * 
+   * For toroidal turns, the sweep is around an axis parallel to Z, positioned at the corner center.
+   * This is similar to concentric turn corners but positioned for toroidal geometry.
+   * 
+   * @param {number} bendRadius - Bend radius (distance from corner center to wire center)
+   * @param {number} wireWidth - Wire width (the wider dimension, tangent to core surface)
+   * @param {number} wireHeight - Wire height (the thinner dimension, in Z)
+   * @param {Array} center - [x, y, z] position of corner center
+   * @param {number} startAngleDeg - Starting angle in degrees (0=+X, 90=+Y, 180=-X, 270=-Y)
+   * @param {number} ySign - +1 for top half, -1 for bottom half (determines sweep direction)
+   * @private
+   */
+  _makeToroidalQuarterSweptRectangle(bendRadius, wireWidth, wireHeight, center, startAngleDeg, ySign) {
+    const { getOC, Solid } = this.r;
+    
+    try {
+      const oc = getOC();
+      
+      // The rectangle cross-section is wireWidth × wireHeight
+      // For the corner, the rectangle is in the plane perpendicular to the sweep direction
+      // The sweep is around Z axis at the corner center
+      const hw = wireWidth / 2;
+      const hh = wireHeight / 2;
+      
+      // Create rectangle at radius=bendRadius from origin, in XZ plane (Y=0)
+      // The rectangle's width is in the radial direction (X), height is Z
+      const p1 = new oc.gp_Pnt_3(bendRadius - hw, 0, -hh);
+      const p2 = new oc.gp_Pnt_3(bendRadius + hw, 0, -hh);
+      const p3 = new oc.gp_Pnt_3(bendRadius + hw, 0, hh);
+      const p4 = new oc.gp_Pnt_3(bendRadius - hw, 0, hh);
+      
+      // Create edges
+      const edge1 = new oc.BRepBuilderAPI_MakeEdge_3(p1, p2).Edge();
+      const edge2 = new oc.BRepBuilderAPI_MakeEdge_3(p2, p3).Edge();
+      const edge3 = new oc.BRepBuilderAPI_MakeEdge_3(p3, p4).Edge();
+      const edge4 = new oc.BRepBuilderAPI_MakeEdge_3(p4, p1).Edge();
+      
+      // Create wire from edges
+      const wireMaker = new oc.BRepBuilderAPI_MakeWire_1();
+      wireMaker.Add_1(edge1);
+      wireMaker.Add_1(edge2);
+      wireMaker.Add_1(edge3);
+      wireMaker.Add_1(edge4);
+      const rectWire = wireMaker.Wire();
+      
+      // Create face from wire
+      const faceMaker = new oc.BRepBuilderAPI_MakeFace_15(rectWire, true);
+      const rectFace = faceMaker.Face();
+      
+      // Rotate the face to the start angle
+      const startAngleRad = (startAngleDeg * Math.PI) / 180;
+      let faceToRevolve = rectFace;
+      if (Math.abs(startAngleDeg) > 0.001) {
+        const rotAxis = new oc.gp_Ax1_2(
+          new oc.gp_Pnt_3(0, 0, 0),
+          new oc.gp_Dir_4(0, 0, 1)
+        );
+        const transform = new oc.gp_Trsf_1();
+        transform.SetRotation_1(rotAxis, startAngleRad);
+        const transformer = new oc.BRepBuilderAPI_Transform_2(rectFace, transform, true);
+        faceToRevolve = oc.TopoDS.Face_1(transformer.Shape());
+      }
+      
+      // Create revolution axis through origin along Z
+      const revolveAxis = new oc.gp_Ax1_2(
+        new oc.gp_Pnt_3(0, 0, 0),
+        new oc.gp_Dir_4(0, 0, 1)
+      );
+      
+      // Revolve 90 degrees (π/2) - direction depends on ySign
+      // For +Y half: sweep counterclockwise (positive angle)
+      // For -Y half: sweep clockwise (negative angle)
+      const sweepAngle = (Math.PI / 2) * ySign;
+      const revolver = new oc.BRepPrimAPI_MakeRevol_1(faceToRevolve, revolveAxis, sweepAngle, true);
+      const sweptShape = revolver.Shape();
+      
+      const result = new Solid(sweptShape);
+      return result.translate([center[0], center[1], center[2]]);
+    } catch (e) {
+      console.warn('Toroidal quarter swept rectangle failed:', e.message, '- using box approximation');
+      // Fallback: use a box approximation at the corner
+      return this._makeBox(wireWidth, wireWidth, wireHeight)
+        .translate([center[0], center[1], center[2]]);
     }
   }
 }
