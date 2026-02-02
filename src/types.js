@@ -96,6 +96,18 @@ export const GapType = Object.freeze({
   RESIDUAL: 'residual'
 });
 
+/**
+ * Wiring technology as defined in MAS utils.json#/$defs/wiringTechnology
+ * @readonly
+ * @enum {string}
+ */
+export const WiringTechnology = Object.freeze({
+  WOUND: 'Wound',
+  PRINTED: 'Printed',
+  STAMPED: 'Stamped',
+  DEPOSITION: 'Deposition'
+});
+
 // ==========================================================================
 // Utility Functions for MAS Data Handling
 // ==========================================================================
@@ -369,6 +381,72 @@ export class BobbinProcessedDescription {
       windingWindowWidth: ww.width || 0.0,
       windingWindowRadialHeight: ww.radialHeight || 0.0,
       windingWindowAngle: ww.angle ?? null
+    });
+  }
+}
+
+/**
+ * Group description wrapper for MAS coil group data.
+ * Groups represent PCBs or different winding windows in a planar transformer.
+ * See: MAS schemas/magnetic/coil.json#/$defs/group
+ */
+export class GroupDescription {
+  /**
+   * @param {Object} options - Group properties matching MAS group schema
+   */
+  constructor({
+    name = '',                              // MAS: group.name
+    type = WiringTechnology.WOUND,          // MAS: group.type (Wound, Printed, Stamped, Deposition)
+    sectionsOrientation = 'overlapping',    // MAS: group.sectionsOrientation
+    partialWindings = [],                   // MAS: group.partialWindings
+    dimensions = [0, 0],                    // MAS: group.dimensions [width, height]
+    coordinates = [0, 0],                   // MAS: group.coordinates [radial, height]
+    coordinateSystem = 'cartesian',         // MAS: group.coordinateSystem
+    // PCB-specific properties for FR4 board rendering
+    boardThickness = 0.0016,                // FR4 board thickness in meters (default 1.6mm)
+    copperThickness = 0.000035              // Copper layer thickness in meters (default 35µm)
+  } = {}) {
+    this.name = name;
+    this.type = type;
+    this.sectionsOrientation = sectionsOrientation;
+    this.partialWindings = partialWindings;
+    this.dimensions = dimensions;
+    this.coordinates = coordinates;
+    this.coordinateSystem = coordinateSystem;
+    this.boardThickness = boardThickness;
+    this.copperThickness = copperThickness;
+  }
+
+  /**
+   * Check if this group represents a PCB (planar transformer).
+   * @returns {boolean}
+   */
+  isPCB() {
+    return this.type === WiringTechnology.PRINTED || 
+           this.type === 'Printed' ||
+           this.type?.toLowerCase() === 'printed';
+  }
+
+  /**
+   * Create from MAS group data.
+   * @param {Object} data - MAS format group data
+   * @returns {GroupDescription}
+   */
+  static fromDict(data) {
+    if (!data || typeof data !== 'object') {
+      return new GroupDescription();
+    }
+    
+    return new GroupDescription({
+      name: data.name || '',
+      type: data.type || WiringTechnology.WOUND,
+      sectionsOrientation: data.sectionsOrientation || 'overlapping',
+      partialWindings: data.partialWindings || [],
+      dimensions: data.dimensions || [0, 0],
+      coordinates: data.coordinates || [0, 0],
+      coordinateSystem: data.coordinateSystem || 'cartesian',
+      boardThickness: data.boardThickness || 0.0016,
+      copperThickness: data.copperThickness || 0.000035
     });
   }
 }

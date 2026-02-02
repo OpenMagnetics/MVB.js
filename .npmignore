@@ -1,0 +1,25 @@
+# Development files
+node_modules/
+.git/
+.github/
+
+# Test files
+tests/
+testData/
+*.html
+!index.html
+
+# Output from tests
+output/
+
+# Temp files
+*.log
+.DS_Store
+
+# Build config (keep for reference but not needed in package)
+vite.config.js
+
+# Debug/test files
+*.py
+*.mjs
+bug_*.json

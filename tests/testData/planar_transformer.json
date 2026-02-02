@@ -1,0 +1,209 @@
+{
+    "magnetic": {
+        "coil": {
+            "bobbin": {
+                "processedDescription": {
+                    "columnWidth": 0.005,
+                    "columnDepth": 0.010,
+                    "columnThickness": 0.0,
+                    "wallThickness": 0.0,
+                    "columnShape": "rectangular",
+                    "windingWindows": [{
+                        "width": 0.0045,
+                        "height": 0.003
+                    }]
+                }
+            },
+            "functionalDescription": [
+                {
+                    "name": "Primary",
+                    "numberTurns": 4,
+                    "numberParallels": 1,
+                    "isolationSide": "primary",
+                    "wire": {
+                        "type": "planar",
+                        "conductingWidth": { "nominal": 0.001 },
+                        "conductingHeight": { "nominal": 0.000035 }
+                    }
+                },
+                {
+                    "name": "Secondary",
+                    "numberTurns": 4,
+                    "numberParallels": 1,
+                    "isolationSide": "secondary",
+                    "wire": {
+                        "type": "planar",
+                        "conductingWidth": { "nominal": 0.0008 },
+                        "conductingHeight": { "nominal": 0.000035 }
+                    }
+                }
+            ],
+            "groupsDescription": [
+                {
+                    "name": "PCB Layer 1",
+                    "type": "Printed",
+                    "coordinateSystem": "cartesian",
+                    "coordinates": [0.0025, 0.0005],
+                    "dimensions": [0.004, 0.0016],
+                    "sectionsOrientation": "overlapping",
+                    "partialWindings": [
+                        {
+                            "parallelsProportion": [1],
+                            "winding": "Primary"
+                        }
+                    ]
+                },
+                {
+                    "name": "PCB Layer 2",
+                    "type": "Printed",
+                    "coordinateSystem": "cartesian",
+                    "coordinates": [0.0025, -0.0005],
+                    "dimensions": [0.004, 0.0016],
+                    "sectionsOrientation": "overlapping",
+                    "partialWindings": [
+                        {
+                            "parallelsProportion": [1],
+                            "winding": "Secondary"
+                        }
+                    ]
+                }
+            ],
+            "turnsDescription": [
+                {
+                    "name": "Primary_0",
+                    "winding": "Primary",
+                    "parallel": 0,
+                    "layer": "Layer 1",
+                    "coordinates": [0.006, 0.0005],
+                    "dimensions": [0.001, 0.000035],
+                    "crossSectionalShape": "rectangular",
+                    "length": 0.04
+                },
+                {
+                    "name": "Primary_1",
+                    "winding": "Primary",
+                    "parallel": 0,
+                    "layer": "Layer 1",
+                    "coordinates": [0.0075, 0.0005],
+                    "dimensions": [0.001, 0.000035],
+                    "crossSectionalShape": "rectangular",
+                    "length": 0.04
+                },
+                {
+                    "name": "Primary_2",
+                    "winding": "Primary",
+                    "parallel": 0,
+                    "layer": "Layer 1",
+                    "coordinates": [0.009, 0.0005],
+                    "dimensions": [0.001, 0.000035],
+                    "crossSectionalShape": "rectangular",
+                    "length": 0.04
+                },
+                {
+                    "name": "Primary_3",
+                    "winding": "Primary",
+                    "parallel": 0,
+                    "layer": "Layer 1",
+                    "coordinates": [0.0105, 0.0005],
+                    "dimensions": [0.001, 0.000035],
+                    "crossSectionalShape": "rectangular",
+                    "length": 0.04
+                },
+                {
+                    "name": "Secondary_0",
+                    "winding": "Secondary",
+                    "parallel": 0,
+                    "layer": "Layer 2",
+                    "coordinates": [0.006, -0.0005],
+                    "dimensions": [0.0008, 0.000035],
+                    "crossSectionalShape": "rectangular",
+                    "length": 0.04
+                },
+                {
+                    "name": "Secondary_1",
+                    "winding": "Secondary",
+                    "parallel": 0,
+                    "layer": "Layer 2",
+                    "coordinates": [0.0073, -0.0005],
+                    "dimensions": [0.0008, 0.000035],
+                    "crossSectionalShape": "rectangular",
+                    "length": 0.04
+                },
+                {
+                    "name": "Secondary_2",
+                    "winding": "Secondary",
+                    "parallel": 0,
+                    "layer": "Layer 2",
+                    "coordinates": [0.0086, -0.0005],
+                    "dimensions": [0.0008, 0.000035],
+                    "crossSectionalShape": "rectangular",
+                    "length": 0.04
+                },
+                {
+                    "name": "Secondary_3",
+                    "winding": "Secondary",
+                    "parallel": 0,
+                    "layer": "Layer 2",
+                    "coordinates": [0.0099, -0.0005],
+                    "dimensions": [0.0008, 0.000035],
+                    "crossSectionalShape": "rectangular",
+                    "length": 0.04
+                }
+            ]
+        },
+        "core": {
+            "name": "Planar E Core",
+            "geometricalDescription": [
+                {
+                    "type": "half set",
+                    "shape": {
+                        "name": "E 32/6/20",
+                        "family": "planar e",
+                        "type": "standard",
+                        "dimensions": {
+                            "A": { "nominal": 0.032 },
+                            "B": { "nominal": 0.006 },
+                            "C": { "nominal": 0.020 },
+                            "D": { "nominal": 0.004 },
+                            "E": { "nominal": 0.024 },
+                            "F": { "nominal": 0.010 }
+                        },
+                        "magneticCircuit": "open"
+                    },
+                    "rotation": [0, 0, 0],
+                    "position": [0, 0, 0.003]
+                },
+                {
+                    "type": "half set",
+                    "shape": {
+                        "name": "E 32/6/20",
+                        "family": "planar e",
+                        "type": "standard",
+                        "dimensions": {
+                            "A": { "nominal": 0.032 },
+                            "B": { "nominal": 0.006 },
+                            "C": { "nominal": 0.020 },
+                            "D": { "nominal": 0.004 },
+                            "E": { "nominal": 0.024 },
+                            "F": { "nominal": 0.010 }
+                        },
+                        "magneticCircuit": "open"
+                    },
+                    "rotation": [180, 0, 0],
+                    "position": [0, 0, -0.003]
+                }
+            ],
+            "functionalDescription": {
+                "type": "two-piece set",
+                "material": "3F3",
+                "shape": "E 32/6/20",
+                "gapping": [
+                    {
+                        "type": "residual",
+                        "length": 0.00001
+                    }
+                ]
+            }
+        }
+    }
+}

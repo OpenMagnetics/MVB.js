@@ -13,10 +13,12 @@ export {
   ShapeFamily,
   TurnCrossSectionalShape,
   GapType,
+  WiringTechnology,
   // Data classes for MAS data normalization
   WireDescription,
   TurnDescription,
   BobbinProcessedDescription,
+  GroupDescription,
   // Utility functions for MAS data handling
   resolveDimensionalValue,
   flattenDimensions,
