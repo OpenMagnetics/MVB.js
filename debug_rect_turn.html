@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Debug Rectangular Turn</title>
+  <style>
+    body { font-family: monospace; padding: 20px; }
+    pre { background: #f0f0f0; padding: 10px; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h1>Debug Rectangular Toroidal Turn</h1>
+  <pre id="log"></pre>
+  
+  <script type="module">
+    const log = (msg) => {
+      document.getElementById('log').textContent += msg + '\n';
+      console.log(msg);
+    };
+    
+    async function runTest() {
+      log('Initializing OpenCASCADE.js...');
+      
+      // Initialize replicad
+      const replicad = await import('/node_modules/replicad/dist/replicad.js');
+      const opencascade = await import('/node_modules/replicad-opencascadejs/src/replicad_single.js');
+      
+      log('Loading WASM...');
+      const oc = await opencascade.default({
+        locateFile: (file) => `/node_modules/replicad-opencascadejs/src/${file}`
+      });
+      
+      replicad.setOC(oc);
+      log('✓ OpenCASCADE.js loaded!');
+      
+      const { ReplicadBuilder } = await import('/src/index.js');
+      const builder = new ReplicadBuilder(replicad);
+      log('✓ ReplicadBuilder loaded!');
+      log('');
+      
+      // Test parameters matching toroidal_one_turn_rectangular_wire.json
+      const turnDescription = {
+        coordinates: [-0.0040075, 4.907772047583017E-19],  // ~4mm from center
+        additionalCoordinates: [[-0.0169375, 2.0742455160558295E-18]],  // ~17mm
+        rotation: 180,
+        dimensions: [0.006085, 0.001085],  // 6.085mm x 1.085mm wire
+        crossSectionalShape: 'rectangular',
+        name: 'test_turn'
+      };
+      
+      const wireDescription = {
+        wireType: 'rectangular',
+        outerWidth: 0.006085,
+        outerHeight: 0.001085
+      };
+      
+      // Bobbin for T 28/14/12 core
+      const bobbinDescription = {
+        columnDepth: 0.006,  // half of 12mm height
+        windingWindowRadialHeight: 0.00685,
+        windingWindows: [{ radialHeight: 0.00685 }]
+      };
+      
+      log('Creating single rectangular toroidal turn...');
+      log('');
+      log('Input parameters (from test file):');
+      log(`  Wire: ${turnDescription.dimensions[0]*1000}mm x ${turnDescription.dimensions[1]*1000}mm (rectangular)`);
+      log(`  coordinates: [${turnDescription.coordinates[0]*1000}mm, ~0]`);
+      log(`  additionalCoordinates: [${turnDescription.additionalCoordinates[0][0]*1000}mm, ~0]`);
+      log(`  rotation: ${turnDescription.rotation}°`);
+      log('');
+      
+      try {
+        // Call the internal function directly
+        const turn = builder._createToroidalTurn(turnDescription, wireDescription, bobbinDescription);
+        
+        if (turn) {
+          const bb = turn.boundingBox.bounds;
+          log('Generated turn bounding box:');
+          log(`  X: ${bb[0][0].toFixed(2)} to ${bb[1][0].toFixed(2)} (size: ${(bb[1][0]-bb[0][0]).toFixed(2)} mm)`);
+          log(`  Y: ${bb[0][1].toFixed(2)} to ${bb[1][1].toFixed(2)} (size: ${(bb[1][1]-bb[0][1]).toFixed(2)} mm)`);
+          log(`  Z: ${bb[0][2].toFixed(2)} to ${bb[1][2].toFixed(2)} (size: ${(bb[1][2]-bb[0][2]).toFixed(2)} mm)`);
+          log('');
+          
+          // Expected bounds for a turn at X = -4mm to -17mm
+          const innerRadial = 4.0;  // mm
+          const outerRadial = 16.94;  // mm
+          const tubeLen = 6.54;  // from logs
+          const wireW = 6.085;
+          const wireH = 1.085;
+          
+          log('Expected bounds (turn at rotation=180°, innerX=-4.0, outerX=-16.9):');
+          log(`  X: ~-${outerRadial + wireW/2} to ~-${innerRadial - wireW/2} (${outerRadial - innerRadial + wireW} mm)`);
+          log(`  Y: ~-${tubeLen} to ~+${tubeLen} (through hole, ${tubeLen*2} mm)`);
+          log(`  Z: ~-${wireH/2} to ~+${wireH/2} (wire height, ${wireH} mm)`);
+          log('');
+          
+          // Export STL
+          const stlOptions = { tolerance: 0.5, angularTolerance: 0.5, binary: false };
+          const stl = turn.blobSTL ? turn.blobSTL(stlOptions) : null;
+          if (stl) {
+            log(`STL blob size: ${stl.size} bytes`);
+          }
+          
+          log('');
+          log('✓ Test complete!');
+        } else {
+          log('✗ Turn creation returned null');
+        }
+      } catch (e) {
+        log('✗ Error: ' + e.message);
+        console.error(e);
+      }
+      
+      window.testsDone = true;
+    }
+    
+    runTest().catch(e => {
+      log('Error: ' + e.message);
+      console.error(e);
+      window.testsDone = true;
+    });
+  </script>
+</body>
+</html>

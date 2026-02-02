@@ -251,6 +251,61 @@
                 });
 
                 // =============================================================
+                // Planar Tests - PCB/FR4 board rendering
+                // =============================================================
+                
+                log('\n========================================');
+                log('Planar Transformer Tests');
+                log('========================================');
+                
+                // test_planar_transformer_with_fr4_boards
+                await runTest('test_planar_transformer_with_fr4_boards', async () => {
+                    const result = await runMagneticTest(replicad, builder, 'planar_transformer.json');
+                    return result.stlSize > 100;
+                });
+
+                // test_bug_planar_missing_fr4 - specific bug test
+                await runTest('test_bug_planar_missing_fr4', async () => {
+                    const result = await runMagneticTest(replicad, builder, 'bug_planar_missing_fr4.json');
+                    return result.stlSize > 100;
+                });
+
+                // test_getFR4Board_direct - explicitly test FR4 board generation
+                await runTest('test_getFR4Board_direct', async () => {
+                    // Load the bug file
+                    const response = await fetch(`${TEST_DATA_PATH}/bug_planar_missing_fr4.json`);
+                    const masData = await response.json();
+                    const magneticData = masData.magnetic || masData;
+                    const coil = magneticData.coil;
+                    
+                    // Get group and bobbin data
+                    const groupDesc = coil.groupsDescription[0];
+                    const bobbinProcessed = coil.bobbin.processedDescription;
+                    
+                    log(`    Group type: ${groupDesc.type}`);
+                    log(`    Group dimensions: [${groupDesc.dimensions.join(', ')}]`);
+                    log(`    Group coordinates: [${groupDesc.coordinates.join(', ')}]`);
+                    log(`    Column shape: ${bobbinProcessed.columnShape}`);
+                    
+                    // Call getFR4Board directly
+                    const fr4Board = builder.getFR4Board(groupDesc, bobbinProcessed, null);
+                    
+                    if (!fr4Board) {
+                        log('    ✗ getFR4Board returned null!', false);
+                        return false;
+                    }
+                    
+                    log('    ✓ FR4 board shape generated');
+                    
+                    // Try to export as STL
+                    const stl = fr4Board.blobSTL(stlOptions);
+                    log(`    STL size: ${stl.size} bytes`);
+                    downloadBlob('fr4_board_direct.stl', stl);
+                    
+                    return stl.size > 100;
+                });
+
+                // =============================================================
                 // Summary
                 // =============================================================
                 log('\n========================================');

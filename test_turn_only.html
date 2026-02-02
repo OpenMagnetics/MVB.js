@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Export Turn Only</title>
+</head>
+<body>
+  <pre id="log"></pre>
+  <script type="module">
+    const log = (msg) => {
+      document.getElementById('log').textContent += msg + '\n';
+      console.log(msg);
+    };
+
+    async function main() {
+      log('Loading replicad...');
+      
+      const replicad = await import('/node_modules/replicad/dist/replicad.js');
+      const opencascade = await import('/node_modules/replicad-opencascadejs/src/replicad_single.js');
+      
+      log('Loading WASM...');
+      const oc = await opencascade.default({
+        locateFile: (file) => `/node_modules/replicad-opencascadejs/src/${file}`
+      });
+      
+      replicad.setOC(oc);
+      log('OpenCASCADE loaded');
+      
+      const { ReplicadBuilder } = await import('/src/index.js');
+      const builder = new ReplicadBuilder(replicad);
+      log('Builder loaded');
+      
+      // Parameters from toroidal_one_turn_rectangular_wire.json
+      const turnDescription = {
+        coordinates: [-0.0040075, 4.907772047583017E-19],
+        additionalCoordinates: [[-0.0169375, 2.0742455160558295E-18]],
+        rotation: 180,
+        dimensions: [0.006085, 0.001085],
+        crossSectionalShape: 'rectangular',
+        name: 'test_turn'
+      };
+      
+      const wireDescription = {
+        wireType: 'rectangular',
+        outerWidth: 0.006085,
+        outerHeight: 0.001085
+      };
+      
+      const bobbinDescription = {
+        columnDepth: 0.006,
+        windingWindowRadialHeight: 0.00685,
+        windingWindows: [{ radialHeight: 0.00685 }]
+      };
+      
+      log('');
+      log('Wire: ' + (turnDescription.dimensions[0]*1000).toFixed(3) + 'mm (width) x ' + (turnDescription.dimensions[1]*1000).toFixed(3) + 'mm (height)');
+      log('');
+      log('Creating turn...');
+      
+      const turn = builder._createToroidalTurn(turnDescription, wireDescription, bobbinDescription);
+      
+      if (turn) {
+        const bb = turn.boundingBox.bounds;
+        log('');
+        log('Turn-only bounding box:');
+        log('  X: ' + bb[0][0].toFixed(2) + ' to ' + bb[1][0].toFixed(2) + ' (size: ' + (bb[1][0]-bb[0][0]).toFixed(2) + ' mm)');
+        log('  Y: ' + bb[0][1].toFixed(2) + ' to ' + bb[1][1].toFixed(2) + ' (size: ' + (bb[1][1]-bb[0][1]).toFixed(2) + ' mm)');
+        log('  Z: ' + bb[0][2].toFixed(2) + ' to ' + bb[1][2].toFixed(2) + ' (size: ' + (bb[1][2]-bb[0][2]).toFixed(2) + ' mm)');
+        log('');
+        log('Expected Z size: wireHeight = 1.085 mm');
+        
+        // Store for Puppeteer to retrieve
+        const stlOptions = { tolerance: 0.1, angularTolerance: 0.1, binary: false };
+        window.turnSTL = turn.blobSTL(stlOptions);
+        window.testComplete = true;
+        log('');
+        log('Done!');
+      } else {
+        log('Turn creation returned null');
+        window.testComplete = true;
+      }
+    }
+    
+    main().catch(e => {
+      console.error('Error:', e);
+      document.getElementById('log').textContent += 'Error: ' + e.message + '\n';
+      window.testComplete = true;
+    });
+  </script>
+</body>
+</html>

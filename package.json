@@ -1,5 +1,5 @@
 {
-  "name": "open-magnetics-virtual-builder",
+  "name": "@openmagnetics/magnetic-virtual-builder",
   "version": "1.0.0",
   "description": "OpenMagnetics Virtual Builder - Browser-based 3D magnetic component geometry generator",
   "type": "module",

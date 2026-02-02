@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Simple Toroidal Test</title>
+  <style>
+    body { font-family: monospace; padding: 20px; }
+    .pass { color: green; }
+    .fail { color: red; }
+    pre { background: #f5f5f5; padding: 10px; overflow: auto; }
+  </style>
+</head>
+<body>
+  <h1>Simple Toroidal Test - Rectangular Wire</h1>
+  <div id="output">Loading...</div>
+  
+  <script type="module">
+    import opencascade from 'replicad-opencascadejs/src/replicad_single.js';
+    import wasmUrl from 'replicad-opencascadejs/src/replicad_single.wasm?url';
+    import * as replicad from 'replicad';
+    import { ReplicadBuilder } from './src/replicadBuilder.js';
+    
+    const output = document.getElementById('output');
+    
+    function log(msg, className = '') {
+      const div = document.createElement('div');
+      div.className = className;
+      div.textContent = msg;
+      output.appendChild(div);
+      console.log(msg);
+    }
+    
+    async function runTests() {
+      output.innerHTML = '';
+      log('=== Simple Toroidal Test ===');
+      log('');
+      
+      // Load test data
+      log('Loading test data...');
+      try {
+        const response = await fetch('./tests/testData/bug_rectangular_wires_toroidal_2.json');
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        const testData = await response.json();
+        log('Test data loaded successfully', 'pass');
+        
+        log('Checking data structure...');
+        log(`  magnetic: ${testData.magnetic ? 'exists' : 'missing'}`);
+        log(`  magnetic.coil: ${testData.magnetic?.coil ? 'exists' : 'missing'}`);
+        log(`  magnetic.coil.bobbin: ${testData.magnetic?.coil?.bobbin ? 'exists' : 'missing'}`);
+        log(`  magnetic.coil.bobbin.processedDescription: ${testData.magnetic?.coil?.bobbin?.processedDescription ? 'exists' : 'missing'}`);
+        log(`  magnetic.coil.turnsDescription: ${testData.magnetic?.coil?.turnsDescription ? 'exists' : 'missing'}`);
+        log(`  turnsDescription length: ${testData.magnetic?.coil?.turnsDescription?.length || 0}`);
+        
+        const bobbin = testData.magnetic.coil.bobbin.processedDescription;
+        const turnsDescription = testData.magnetic.coil.turnsDescription;
+        const wire = testData.magnetic.coil.functionalDescription[0].wire;
+        const coreGeometry = testData.magnetic.core.geometricalDescription;
+        
+        log('');
+        log('Bobbin data:');
+        log(`  columnShape: ${bobbin.columnShape}`);
+        log(`  columnDepth: ${bobbin.columnDepth}`);
+        log(`  columnWidth: ${bobbin.columnWidth}`);
+        log(`  windingWindows: ${bobbin.windingWindows ? bobbin.windingWindows.length : 'none'}`);
+        if (bobbin.windingWindows && bobbin.windingWindows.length > 0) {
+          log(`  windingWindows[0].angle: ${bobbin.windingWindows[0].angle}`);
+          log(`  windingWindows[0].radialHeight: ${bobbin.windingWindows[0].radialHeight}`);
+        }
+        log('');
+        
+        log('Wire data:');
+        log(`  type: ${wire.type}`);
+        log(`  outerWidth: ${wire.outerWidth?.nominal}`);
+        log(`  outerHeight: ${wire.outerHeight?.nominal}`);
+        log('');
+        
+        log(`Turns: ${turnsDescription.length} turns`);
+        if (turnsDescription.length > 0) {
+          const turn0 = turnsDescription[0];
+          log(`  Turn 0:`);
+          log(`    coordinates: [${turn0.coordinates.join(', ')}]`);
+          log(`    dimensions: [${turn0.dimensions.join(', ')}]`);
+          log(`    crossSectionalShape: ${turn0.crossSectionalShape}`);
+          log(`    rotation: ${turn0.rotation}`);
+        }
+        log('');
+        
+        // Initialize OpenCASCADE
+        log('Loading OpenCASCADE...');
+        const OC = await opencascade({ locateFile: () => wasmUrl });
+        replicad.setOC(OC);
+        log('OpenCASCADE loaded successfully', 'pass');
+        log('');
+        
+        const builder = new ReplicadBuilder(replicad);
+        
+        // Test all turns
+        log('Testing all turn creation...');
+        const turnShapes = [];
+        for (let i = 0; i < turnsDescription.length; i++) {
+          try {
+            const turn = turnsDescription[i];
+            log(`Creating turn ${i} with rotation ${turn.rotation.toFixed(2)}...`);
+            const turnShape = builder.getTurn(turn, wire, bobbin);
+            turnShapes.push(turnShape);
+            log(`✓ Turn ${i} created successfully`, 'pass');
+          } catch (err) {
+            log(`✗ Turn ${i} creation failed: ${err.message}`, 'fail');
+            console.error(err);
+          }
+        }
+        
+        log('');
+        log(`Created ${turnShapes.length}/${turnsDescription.length} turns`);
+        
+        if (turnShapes.length > 0) {
+          // Try to export first turn to STL
+          log('Exporting first turn to STL...');
+          try {
+            const stlOptions = { tolerance: 0.1, angularTolerance: 0.1, binary: false };
+            const stl = turnShapes[0].blobSTL(stlOptions);
+            const stlText = await stl.text();
+            const facetCount = (stlText.match(/facet normal/g) || []).length;
+            log(`✓ STL exported: ${facetCount} facets`, 'pass');
+            
+            // Analyze vertex positions
+            const lines = stlText.split('\n');
+            const vertexLines = lines.filter(l => l.trim().startsWith('vertex'));
+            log(`Total vertices: ${vertexLines.length}`);
+            
+            // Extract X, Y, Z values
+            const vertices = vertexLines.map(l => {
+              const parts = l.trim().split(/\s+/);
+              return [parseFloat(parts[1]), parseFloat(parts[2]), parseFloat(parts[3])];
+            });
+            
+            // Find min/max for each axis
+            const xVals = vertices.map(v => v[0]);
+            const yVals = vertices.map(v => v[1]);
+            const zVals = vertices.map(v => v[2]);
+            
+            log(`X range: ${Math.min(...xVals).toFixed(2)} to ${Math.max(...xVals).toFixed(2)}`);
+            log(`Y range: ${Math.min(...yVals).toFixed(2)} to ${Math.max(...yVals).toFixed(2)}`);
+            log(`Z range: ${Math.min(...zVals).toFixed(2)} to ${Math.max(...zVals).toFixed(2)}`);
+            
+            // Check unique Z values (should be 2 for rectangular cross-section)
+            const uniqueZ = [...new Set(zVals.map(z => z.toFixed(3)))].sort((a,b) => a-b);
+            log(`Unique Z values: ${uniqueZ.length} (expected 2 for rectangular)`);
+            if (uniqueZ.length <= 10) {
+              uniqueZ.forEach(z => log(`  Z = ${z}`));
+            }
+            
+            // Create download link for single turn
+            const blob1 = new Blob([stlText], { type: 'application/octet-stream' });
+            const url1 = URL.createObjectURL(blob1);
+            const link1 = document.createElement('a');
+            link1.href = url1;
+            link1.download = 'toroidal_turn_0.stl';
+            link1.textContent = 'Download Turn 0 STL';
+            link1.style.marginRight = '20px';
+            output.appendChild(link1);
+            
+            // Export all turns combined
+            log('');
+            log('Exporting all turns combined...');
+            const { makeCompound } = replicad;
+            const allTurns = makeCompound(turnShapes);
+            const allStl = allTurns.blobSTL(stlOptions);
+            const allStlText = await allStl.text();
+            const allFacetCount = (allStlText.match(/facet normal/g) || []).length;
+            log(`✓ All turns STL exported: ${allFacetCount} facets`, 'pass');
+            
+            // Store all turns STL for puppeteer
+            window.stlAllTurns = allStlText;
+            
+            // Build core
+            log('');
+            log('Building core...');
+            const { getCore } = await import('./src/coreShapes.js');
+            const coreShape = getCore(replicad, coreGeometry);
+            log(`✓ Core built successfully`, 'pass');
+            
+            // Export core separately
+            log('Exporting core STL...');
+            const coreStl = coreShape.blobSTL(stlOptions);
+            const coreStlText = await coreStl.text();
+            const coreFacetCount = (coreStlText.match(/facet normal/g) || []).length;
+            log(`✓ Core STL exported: ${coreFacetCount} facets`, 'pass');
+            
+            // Combine STLs by concatenating (simple but works)
+            // Extract facet sections from both STLs and combine
+            const turnsBody = allStlText.replace(/^solid.*\n/m, '').replace(/endsolid.*$/m, '');
+            const coreBody = coreStlText.replace(/^solid.*\n/m, '').replace(/endsolid.*$/m, '');
+            const combinedStlText = `solid combined\n${turnsBody}${coreBody}endsolid combined\n`;
+            const combinedFacetCount = (combinedStlText.match(/facet normal/g) || []).length;
+            log(`✓ Combined STL: ${combinedFacetCount} facets`, 'pass');
+            
+            // Store combined STL for puppeteer
+            window.stlWithCore = combinedStlText;
+            
+            // Create download link for all turns
+            const blob2 = new Blob([allStlText], { type: 'application/octet-stream' });
+            const url2 = URL.createObjectURL(blob2);
+            const link2 = document.createElement('a');
+            link2.href = url2;
+            link2.download = 'toroidal_all_turns.stl';
+            link2.textContent = 'Download All Turns STL';
+            link2.style.marginRight = '20px';
+            output.appendChild(link2);
+            
+            // Create download link for combined
+            const blob3 = new Blob([combinedStlText], { type: 'application/octet-stream' });
+            const url3 = URL.createObjectURL(blob3);
+            const link3 = document.createElement('a');
+            link3.href = url3;
+            link3.download = 'toroidal_with_core.stl';
+            link3.textContent = 'Download With Core STL';
+            output.appendChild(link3);
+            
+          } catch (err) {
+            log(`✗ STL export failed: ${err.message}`, 'fail');
+            console.error(err);
+          }
+        }
+        
+      } catch (err) {
+        log(`Error: ${err.message}`, 'fail');
+        console.error(err);
+      }
+      
+      log('');
+      log('=== Tests Complete ===');
+    }
+    
+    runTests();
+  </script>
+</body>
+</html>
