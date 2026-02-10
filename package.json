@@ -1,6 +1,6 @@
 {
   "name": "@openmagnetics/magnetic-virtual-builder",
-  "version": "1.0.1",
+  "version": "1.0.0",
   "description": "OpenMagnetics Virtual Builder - Browser-based 3D magnetic component geometry generator",
   "type": "module",
   "main": "dist/index.umd.js",

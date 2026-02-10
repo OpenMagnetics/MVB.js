@@ -395,12 +395,6 @@ export class ReplicadBuilder {
                                wireDescription.wireType === 'planar' ||
                                turnCrossSection === 'rectangular';
     
-    console.debug('[MVB] _createToroidalTurn:', {
-      'wireDescription.type': wireDescription.type,
-      'turnDescription.crossSectionalShape': turnDescription.crossSectionalShape,
-      'isRectangularWire': isRectangularWire
-    });
-    
     let wireWidth, wireHeight, wireRadius;
     
     // Helper to extract value from MAS-style objects (e.g., { nominal: 0.001 }) or plain numbers
@@ -511,17 +505,6 @@ export class ReplicadBuilder {
     // Radial segment length
     // Ensure it's not negative (which would create invalid geometry)
     const radialLength = Math.max(0.1, radialDistance - 2 * bendRadius);
-    
-    console.log('[MVB] ToroidalTurn: innerRadial=' + innerRadial.toFixed(2) + 
-                ', outerRadial=' + outerRadial.toFixed(2) + 
-                ', radialDistance=' + radialDistance.toFixed(2) +
-                ', turnRotationDeg=' + turnRotationDeg.toFixed(1));
-    console.debug('[MVB] _createToroidalTurn geometry:', {
-      innerRadial, outerRadial, radialDistance,
-      halfDepth, bendRadius, radialHeight,
-      tubeLength, radialLength,
-      wireWidth, wireHeight
-    });
 
     // For rectangular wires in toroidal configuration:
     // The turn wraps AROUND the toroidal core's circular cross-section.
@@ -604,15 +587,6 @@ export class ReplicadBuilder {
       // Build top half (+Y) and bottom half (-Y)
       pieces.push(...buildRectHalf(+1));
       pieces.push(...buildRectHalf(-1));
-      
-      console.log('[MVB] ToroidalRectTurn: tubeLength=' + tubeLength.toFixed(2) +
-                  ', radialLength=' + radialLength.toFixed(2) +
-                  ', radialHeight=' + radialHeight.toFixed(2) +
-                  ', bendRadius=' + bendRadius.toFixed(2) +
-                  ', innerX=' + innerX.toFixed(2) +
-                  ', outerX=' + outerX.toFixed(2) +
-                  ', wireWidth=' + wireWidth.toFixed(2) +
-                  ', wireHeight=' + wireHeight.toFixed(2));
       
       // Combine all pieces
       let fullTurn = makeCompound(pieces);
@@ -912,26 +886,27 @@ export class ReplicadBuilder {
    * The board is rendered as a translucent green slab with a central hole
    * for the magnetic core column.
    * 
-   * @param {GroupDescription} groupDescription - Group data from MAS coil.groupsDescription
-   * @param {BobbinProcessedDescription} bobbinDescription - Bobbin parameters for column dimensions
-   * @param {number} [boardThickness] - Optional override for FR4 thickness (meters)
-   * @param {boolean} [forceBuild] - If true, skip PCB type check (use when wire type is planar)
+   * @param {Object} coil
    * @returns {Object|null} - Replicad shape or null if not applicable
    */
-  getFR4Board(groupDescription, bobbinDescription, boardThickness = null, forceBuild = false) {
+  getFR4Board(coil) {
+    if (!coil || !coil.groupsDescription || coil.groupsDescription.length === 0) {
+      console.warn('getFR4Board: Invalid coil data - missing groupsDescription');
+      return null;
+    }
+    
+    const groupDescription = coil.groupsDescription[0];
+    const bobbinDescription = coil.bobbin;
     const SCALE = this.SCALE;
     const { makeCylinder } = this.r;
 
     // Only create FR4 for PCB groups (Printed wiring technology)
-    // Skip this check if forceBuild is true (caller detected planar wire type)
-    if (!forceBuild) {
-      if (!groupDescription.isPCB || (typeof groupDescription.isPCB === 'function' && !groupDescription.isPCB())) {
-        const groupType = groupDescription.type || '';
-        if (groupType !== WiringTechnology.PRINTED && 
-            groupType !== 'Printed' && 
-            groupType?.toLowerCase() !== 'printed') {
-          return null;
-        }
+    if (!groupDescription.isPCB || (typeof groupDescription.isPCB === 'function' && !groupDescription.isPCB())) {
+      const groupType = groupDescription.type || '';
+      if (groupType !== WiringTechnology.PRINTED && 
+          groupType !== 'Printed' && 
+          groupType?.toLowerCase() !== 'printed') {
+        return null;
       }
     }
 
@@ -949,14 +924,26 @@ export class ReplicadBuilder {
     // Group position and size (in meters, convert to mm)
     const groupX = (groupCoords[0] || 0) * SCALE;        // Radial position from center to group center
     const groupZ = (groupCoords[1] || 0) * SCALE;        // Height position (Z)
-    const groupRadialWidth = (groupDims[0] || 0.005) * SCALE;  // Radial extent (width in X direction)
-    const groupThicknessZ = (groupDims[1] || 0.001) * SCALE;   // FR4 thickness (height in Z direction)
+    const groupWidth = (groupDims[0]) * SCALE;
+    let groupDepth = (coil.bobbin.processedDescription.columnDepth) * SCALE;
+    console.log('groupDepth', groupDepth);
+    
+    let maximumLayerWidth = 0;
+    for (const layer of coil.groupsDescription) {
+        const currentLayerExternalPoint = layer.dimensions[0] * SCALE;
+        maximumLayerWidth = Math.max(maximumLayerWidth, currentLayerExternalPoint);
+    }
 
+    groupDepth += maximumLayerWidth;
+
+    const groupHeight = (groupDims[1] || 0.001) * SCALE;   // FR4 thickness (height in Z direction)
+
+
+    console.log('getFR4Board2 coil:', coil);
     // Use group dimensions[1] as thickness (matching 2D painter), or override if provided
     // Apply minimum thickness of 0.5mm to avoid z-fighting with wires
     const MIN_FR4_THICKNESS = 0.5;  // mm
-    const rawThickness = boardThickness ? (boardThickness * SCALE) : groupThicknessZ;
-    const fr4Thickness = Math.max(rawThickness, MIN_FR4_THICKNESS);
+    const fr4Thickness = Math.max(groupHeight, MIN_FR4_THICKNESS);
 
     // Get column dimensions
     const colWidth = (bobbinDescription.columnWidth || 0.002) * SCALE;
@@ -965,10 +952,10 @@ export class ReplicadBuilder {
 
     // Calculate inner and outer radii/edges from group position
     // groupX is the CENTER of the group in the radial direction
-    // Inner edge = groupX - groupRadialWidth/2 (where group starts, near column)
-    // Outer edge = groupX + groupRadialWidth/2 (where group ends, away from column)
-    const innerRadius = groupX - groupRadialWidth / 2;
-    const outerRadius = groupX + groupRadialWidth / 2;
+    // Inner edge = groupX - groupWidth/2 (where group starts, near column)
+    // Outer edge = groupX + groupWidth/2 (where group ends, away from column)
+    const innerRadius = groupX - groupWidth / 2;
+    const outerRadius = groupX + groupWidth / 2;
     
     // Add small clearance for the hole
     const holeMargin = 0.2;  // mm clearance
@@ -991,7 +978,7 @@ export class ReplicadBuilder {
       // For rectangular/oblong columns, create a rectangular board with rectangular hole
       // The board extends symmetrically around the column
       const boardFullWidth = outerRadius * 2;   // X dimension (symmetric)
-      const boardFullDepth = outerRadius * 2;   // Y dimension (assume square for rectangular column)
+      const boardFullDepth = groupDepth * 2;   // Y dimension (assume square for rectangular column)
       
       fr4Board = this._makeBox(boardFullWidth, boardFullDepth, fr4Thickness)
         .translate([0, 0, groupZ]);
@@ -1047,7 +1034,9 @@ export class ReplicadBuilder {
     }
 
     // Build coil turns
-    const coilData = magneticData.coil || {};
+    console.log('magneticData:', magneticData);
+    const coilData = magneticData.coil || magneticData || {};
+    console.log('coilData after assignment:', coilData);
     const bobbinData = coilData.bobbin || {};
     
     let bobbinProcessed;
@@ -1081,22 +1070,19 @@ export class ReplicadBuilder {
       }
     }
 
-    // Build FR4 boards for planar transformer groups
-    // FR4 boards are translucent green PCB substrates
+    // Build FR4 boards for planar transformers
     if (isPlanar) {
+      console.log('Building FR4, isPlanar:', isPlanar, 'groupsData:', groupsData.length);
       for (const groupData of groupsData) {
         const groupDesc = GroupDescription.fromDict(groupData);
         
-        if (groupDesc.isPCB()) {
-          try {
-            const fr4Board = this.getFR4Board(groupDesc, bobbinProcessed);
-            if (fr4Board !== null) {
-              allPieces.push(fr4Board);
-              console.log('[MVB] Added FR4 board for group:', groupDesc.name);
-            }
-          } catch (err) {
-            console.warn('[MVB] Could not build FR4 board:', err.message);
+        try {
+          const fr4Board = this.getFR4Board(groupDesc, bobbinProcessed, coilData, null, true);
+          if (fr4Board !== null) {
+            allPieces.push(fr4Board);
           }
+        } catch (err) {
+          console.warn('[MVB] Could not build FR4 board:', err.message);
         }
       }
     }
@@ -1124,24 +1110,12 @@ export class ReplicadBuilder {
           const crossShape = (turnData.crossSectionalShape || '').toLowerCase();
           const isRectangular = crossShape === 'rectangular' || crossShape === 'foil' || crossShape === 'planar';
           
-          console.log('[MVB] Creating WireDescription from turnData:', {
-            'turnData.crossSectionalShape': turnData.crossSectionalShape,
-            'crossShape': crossShape,
-            'isRectangular': isRectangular,
-            'dims': dims
-          });
-          
           wireDesc = new WireDescription({
             type: isRectangular ? WireType.RECTANGULAR : WireType.ROUND,
             outerDiameter: dims[0],
             conductingDiameter: dims[0],
             outerWidth: dims[0],
             outerHeight: dims[1]
-          });
-          
-          console.log('[MVB] Created WireDescription:', {
-            'wireDesc.type': wireDesc.type,
-            'wireDesc.wireType': wireDesc.wireType
           });
         }
       }
