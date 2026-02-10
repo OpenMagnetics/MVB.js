@@ -12,7 +12,18 @@
   <pre id="log"></pre>
   
   <script type="module">
-    import { initReplicad } from './src/replicadBuilder.js';
+    // Import replicad with proper OpenCASCADE initialization
+    const replicad = await import('/node_modules/replicad/dist/replicad.js');
+    const opencascade = await import('/node_modules/replicad-opencascadejs/src/replicad_single.js');
+    
+    // Initialize OpenCASCADE with explicit WASM path
+    const oc = await opencascade.default({
+        locateFile: (file) => `/node_modules/replicad-opencascadejs/src/${file}`
+    });
+    replicad.setOC(oc);
+    
+    // Import our builder
+    const { ReplicadBuilder } = await import('/src/index.js');
     
     const log = (msg) => {
       document.getElementById('log').textContent += msg + '\n';
@@ -22,9 +33,7 @@
     async function runTest() {
       log('Initializing...');
       
-      const r = await initReplicad();
-      const { ReplicadBuilder } = await import('./src/replicadBuilder.js');
-      const builder = new ReplicadBuilder(r);
+      const builder = new ReplicadBuilder(replicad);
       
       log('Creating simple rectangular toroidal turn...');
       

@@ -1077,7 +1077,7 @@ export class ReplicadBuilder {
         const groupDesc = GroupDescription.fromDict(groupData);
         
         try {
-          const fr4Board = this.getFR4Board(groupDesc, bobbinProcessed, coilData, null, true);
+          const fr4Board = this.getFR4Board(coilData);
           if (fr4Board !== null) {
             allPieces.push(fr4Board);
           }

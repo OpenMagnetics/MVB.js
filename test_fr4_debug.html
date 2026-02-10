@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>FR4 Board Test</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 20px;
+        }
+        #log {
+            white-space: pre-wrap;
+            font-family: monospace;
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 5px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .passed { color: green; }
+        .failed { color: red; }
+        #viewer {
+            width: 800px;
+            height: 600px;
+            border: 1px solid #ccc;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>FR4 Board Visualization Test</h1>
+    <p>Testing FR4 board generation for planar transformers</p>
+    <div id="log"></div>
+    <div id="viewer"></div>
+    
+    <script type="module">
+        const logDiv = document.getElementById('log');
+        
+        function log(message, isSuccess = null) {
+            const line = document.createElement('div');
+            line.textContent = message;
+            if (isSuccess === true) line.className = 'passed';
+            if (isSuccess === false) line.className = 'failed';
+            logDiv.appendChild(line);
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(message);
+        }
+        
+        async function runTest() {
+            log('=== FR4 Board Test ===');
+            
+            try {
+                // Load test data
+                log('Loading test data...');
+                const response = await fetch('/bug_planar_missing_fr4.json');
+                if (!response.ok) {
+                    log(`Failed to load test data: ${response.status}`, false);
+                    return;
+                }
+                const data = await response.json();
+                log('✓ Test data loaded', true);
+                
+                const magnetic = data.magnetic;
+                const coil = magnetic?.coil;
+                
+                // Check structure
+                log(`\nCoil structure check:`);
+                log(`  groupsDescription: ${coil?.groupsDescription?.length || 0} groups`);
+                log(`  turnsDescription: ${coil?.turnsDescription?.length || 0} turns`);
+                log(`  bobbin.processedDescription: ${coil?.bobbin?.processedDescription ? 'present' : 'missing'}`);
+                
+                if (coil?.groupsDescription?.length > 0) {
+                    for (let i = 0; i < coil.groupsDescription.length; i++) {
+                        const group = coil.groupsDescription[i];
+                        log(`  Group ${i}: type="${group.type}", name="${group.name}"`);
+                        if (group.type === 'Printed') {
+                            log(`    → This group should trigger FR4 board generation`, true);
+                        }
+                    }
+                }
+                
+                // Initialize OpenCASCADE/Replicad
+                log('\nInitializing OpenCASCADE.js...');
+                log('(This may take 10-20 seconds)');
+                
+                const replicad = await import('/node_modules/replicad/dist/replicad.js');
+                const opencascade = await import('/node_modules/replicad-opencascadejs/src/replicad_single.js');
+                
+                const oc = await opencascade.default({
+                    locateFile: (file) => `/node_modules/replicad-opencascadejs/src/${file}`
+                });
+                replicad.setOC(oc);
+                log('✓ OpenCASCADE.js loaded!', true);
+                
+                // Import MVB builder
+                const { ReplicadBuilder } = await import('/src/index.js');
+                log('✓ ReplicadBuilder loaded!', true);
+                
+                const builder = new ReplicadBuilder(replicad);
+                
+                // Test getFR4Board directly
+                log('\nTesting getFR4Board...');
+                const groupDesc = coil.groupsDescription[0];
+                const bobbinProcessed = coil.bobbin.processedDescription;
+                
+                log(`  Calling getFR4Board with:`);
+                log(`    group.type: ${groupDesc.type}`);
+                log(`    group.dimensions: [${groupDesc.dimensions?.join(', ')}]`);
+                log(`    group.coordinates: [${groupDesc.coordinates?.join(', ')}]`);
+                log(`    bobbin.columnWidth: ${bobbinProcessed.columnWidth}`);
+                log(`    bobbin.columnDepth: ${bobbinProcessed.columnDepth}`);
+                log(`    bobbin.columnShape: ${bobbinProcessed.columnShape}`);
+                
+                const fr4Board = builder.getFR4Board(groupDesc, bobbinProcessed, null);
+                
+                if (fr4Board) {
+                    log('\n✓ FR4 board shape generated!', true);
+                    
+                    // Export to STL
+                    const stl = fr4Board.blobSTL({ tolerance: 0.5, angularTolerance: 0.5, binary: true });
+                    log(`  STL size: ${stl.size} bytes`);
+                    
+                    // Test getMagnetic
+                    log('\nTesting getMagnetic...');
+                    const fullShape = builder.getMagnetic(magnetic, 'test_fr4');
+                    if (fullShape) {
+                        const fullStl = fullShape.blobSTL({ tolerance: 0.5, angularTolerance: 0.5, binary: true });
+                        log(`✓ Full magnetic generated: ${fullStl.size} bytes`, true);
+                    }
+                    
+                } else {
+                    log('\n✗ getFR4Board returned null!', false);
+                }
+                
+                log('\n=== Test Complete ===');
+                
+            } catch (err) {
+                log(`\n✗ Error: ${err.message}`, false);
+                log(err.stack);
+            }
+        }
+        
+        runTest();
+    </script>
+</body>
+</html>

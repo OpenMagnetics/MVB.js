@@ -288,7 +288,7 @@
                     log(`    Column shape: ${bobbinProcessed.columnShape}`);
                     
                     // Call getFR4Board directly
-                    const fr4Board = builder.getFR4Board(groupDesc, bobbinProcessed, null);
+                    const fr4Board = builder.getFR4Board(coil);
                     
                     if (!fr4Board) {
                         log('    ✗ getFR4Board returned null!', false);
