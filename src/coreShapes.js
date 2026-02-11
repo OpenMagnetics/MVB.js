@@ -6,7 +6,8 @@
  * matching the Python cadquery_builder.py implementation.
  */
 
-import { flattenDimensions, convertAxis } from './types.js';
+import { CoreGeometricalDescriptionElementType } from './MAS.ts';
+import { flattenDimensions, convertAxis } from './utils.js';
 
 // ==========================================================================
 // Base Shape Class
@@ -1513,66 +1514,65 @@ export function getShapeBuilder(replicad, family) {
  * @param {Array} geometricalDescription - Array of core parts
  * @returns {Object} - Combined core shape
  */
+/**
+ * Create a complete core from a MAS Geometrical Description.
+ * @param {Object} replicad - Replicad module
+ * @param {Array<Object>} geometricalDescription - Array of CoreGeometricalDescriptionElement from MAS
+ * @returns {Object|null} - Combined core shape or null
+ */
 export function getCore(replicad, geometricalDescription) {
-  const { makeBaseBox } = replicad;
-  let pieces = [];
+  if (!geometricalDescription || geometricalDescription.length === 0) {
+    return null;
+  }
+
+  const pieces = [];
   
-  for (let index = 0; index < geometricalDescription.length; index++) {
-    const part = geometricalDescription[index];
-    
-    // Skip spacers - they are built separately via getSpacers()
-    if (part.type === 'spacer') {
-      continue;
-    } else if (part.type === 'half set' || part.type === 'toroidal') {
-      // Create shape piece
-      const shapeData = { ...part.shape };
-      shapeData.dimensions = flattenDimensions(shapeData);
-      
-      const shapeBuilder = getShapeBuilder(replicad, shapeData.family);
-      let piece = shapeBuilder.getPiece(shapeData);
-      
-      // Apply rotations (MAS uses radians)
-      // Python's rotation order is:
-      //   rotation[0] -> X axis
-      //   rotation[1] -> Z axis (note: not Y!)
-      //   rotation[2] -> Y axis (note: not Z!)
-      // Python rotates around negative axis (from +1 to -1), so we negate the angle
-      // to get the same rotation direction with positive axis
-      const rotX = -(part.rotation[0] / Math.PI) * 180;
-      const rotZ = -(part.rotation[1] / Math.PI) * 180;  // rotation[1] is Z, not Y
-      const rotY = -(part.rotation[2] / Math.PI) * 180;  // rotation[2] is Y, not Z
+  for (const part of geometricalDescription) {
+    if (part.type === CoreGeometricalDescriptionElementType.Spacer) {
+      continue; // Spacers are handled by getSpacers()
+    }
+
+    // Every other valid part type has a shape
+    if (!part.shape) {
+        console.warn(`[MVB] Skipping core part of type '${part.type}' because it is missing a 'shape' property.`);
+        continue;
+    }
+
+    const flattenedDimensions = flattenDimensions(part.shape);
+
+    const shapeBuilder = getShapeBuilder(replicad, part.shape.family);
+    let piece = shapeBuilder.getPiece({ ...part.shape, dimensions: flattenedDimensions });
+
+    const rotation = part.rotation;
+    if (rotation && rotation.length >= 3) {
+      const rotX = -(rotation[0] / Math.PI) * 180;
+      const rotZ = -(rotation[1] / Math.PI) * 180;
+      const rotY = -(rotation[2] / Math.PI) * 180;
       
       if (rotX !== 0) piece = piece.rotate(rotX, [0, 0, 0], [1, 0, 0]);
       if (rotZ !== 0) piece = piece.rotate(rotZ, [0, 0, 0], [0, 0, 1]);
       if (rotY !== 0) piece = piece.rotate(rotY, [0, 0, 0], [0, 1, 0]);
-      
-      // Apply machining (gaps) from MKF data
-      if (part.machining) {
-        for (const machining of part.machining) {
-          piece = shapeBuilder.applyMachining(piece, machining, shapeData.dimensions);
-        }
-      }
-      
-      // Translate to position
-      // MKF coordinates are [radial, height, depth] which need conversion
-      // to CadQuery coordinates [X, Y, Z] = [radial, depth, height]
-      piece = piece.translate(convertAxis(part.coordinates));
-      
-      // Add residual gap for half sets
-      if (part.type === 'half set') {
-        const residualGap = 5e-6;
-        if (part.rotation[0] > 0) {
-          piece = piece.translate([0, 0, residualGap / 2]);
-        } else {
-          piece = piece.translate([0, 0, -residualGap / 2]);
-        }
-      }
-      
-      pieces.push(piece);
     }
+    
+    if (part.machining) {
+      for (const machining of part.machining) {
+        if (machining.coordinates) {
+          piece = shapeBuilder.applyMachining(piece, machining, flattenedDimensions);
+        }
+      }
+    }
+    
+    piece = piece.translate(convertAxis(part.coordinates));
+    
+    // Residual gap for half-sets
+    if (part.type === CoreGeometricalDescriptionElementType.HalfSet && rotation && rotation.length > 0) {
+      const residualGap = 5e-6; // This is a physical constant, not a magic number
+      piece = piece.translate([0, 0, rotation[0] > 0 ? residualGap / 2 : -residualGap / 2]);
+    }
+    
+    pieces.push(piece);
   }
   
-  // Combine all pieces
   if (pieces.length === 0) {
     return null;
   }
@@ -1583,9 +1583,7 @@ export function getCore(replicad, geometricalDescription) {
   }
   
   // Scale from meters to mm (SCALE = 1000)
-  // MAS dimensions are in meters, but the rest of the codebase works in mm
-  const SCALE = 1000;
-  result = result.scale(SCALE);
+  result = result.scale(1000);
   
   return result;
 }

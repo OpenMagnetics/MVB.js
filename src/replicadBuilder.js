@@ -8,15 +8,17 @@
 import {
   WireType,
   ColumnShape,
-  WiringTechnology,
-  WireDescription,
-  TurnDescription,
-  BobbinProcessedDescription,
-  GroupDescription,
-  flattenDimensions,
-  convertAxis
-} from './types.js';
+  WiringTechnology
+} from './MAS.ts';
 
+import {
+  flattenDimensions,
+  convertAxis,
+  wireFromDict,
+  turnFromDict,
+  groupFromDict,
+  bobbinFromDict
+} from './utils.js';
 import { getCore, getSpacers, getSupportedFamilies } from './coreShapes.js';
 
 // ==========================================================================
@@ -127,8 +129,8 @@ export class ReplicadBuilder {
     // 2. wireDescription.type === 'rectangular' or 'planar' (planar wire has rectangular cross-section)
     // 3. turnDescription.crossSectionalShape === 'rectangular'
     const turnCrossSection = turnDescription.crossSectionalShape?.toLowerCase();
-    const isRectangularWire = wireDescription.wireType === WireType.RECTANGULAR || 
-                               wireDescription.type === WireType.RECTANGULAR ||
+    const isRectangularWire = wireDescription.wireType === WireType.Rectangular || 
+                               wireDescription.type === WireType.Rectangular ||
                                wireDescription.type === 'rectangular' ||
                                wireDescription.wireType === 'rectangular' ||
                                wireDescription.type === 'planar' ||
@@ -185,7 +187,7 @@ export class ReplicadBuilder {
     
     // Determine column shape
     const columnShape = bobbinDescription.columnShape?.toLowerCase() || 'rectangular';
-    const isRound = columnShape === ColumnShape.ROUND || columnShape === 'round';
+    const isRound = columnShape === ColumnShape.Round || columnShape === 'round';
     const isOblong = columnShape === 'oblong';
 
     if (isRound) {
@@ -387,8 +389,8 @@ export class ReplicadBuilder {
     // 2. wireDescription.type === 'rectangular' or 'planar' (planar wire has rectangular cross-section)
     // 3. turnDescription.crossSectionalShape === 'rectangular'
     const turnCrossSection = turnDescription.crossSectionalShape?.toLowerCase();
-    const isRectangularWire = wireDescription.wireType === WireType.RECTANGULAR || 
-                               wireDescription.type === WireType.RECTANGULAR ||
+    const isRectangularWire = wireDescription.wireType === WireType.Rectangular || 
+                               wireDescription.type === WireType.Rectangular ||
                                wireDescription.type === 'rectangular' ||
                                wireDescription.wireType === 'rectangular' ||
                                wireDescription.type === 'planar' ||
@@ -782,7 +784,7 @@ export class ReplicadBuilder {
     
     // Determine column shape
     const columnShape = bobbinDescription.columnShape?.toLowerCase() || 'rectangular';
-    const isRound = columnShape === ColumnShape.ROUND || columnShape === 'round';
+    const isRound = columnShape === ColumnShape.Round || columnShape === 'round';
     const isOblong = columnShape === 'oblong';
     const isEpx = columnShape === 'epx';  // EPX has a semicircular back side
 
@@ -896,14 +898,14 @@ export class ReplicadBuilder {
     }
     
     const groupDescription = coil.groupsDescription[0];
-    const bobbinDescription = coil.bobbin;
+    const bobbinDescription = coil.bobbin?.processedDescription || coil.bobbin || {};
     const SCALE = this.SCALE;
     const { makeCylinder } = this.r;
 
     // Only create FR4 for PCB groups (Printed wiring technology)
     if (!groupDescription.isPCB || (typeof groupDescription.isPCB === 'function' && !groupDescription.isPCB())) {
       const groupType = groupDescription.type || '';
-      if (groupType !== WiringTechnology.PRINTED && 
+      if (groupType !== WiringTechnology.Printed && 
           groupType !== 'Printed' && 
           groupType?.toLowerCase() !== 'printed') {
         return null;
@@ -925,8 +927,7 @@ export class ReplicadBuilder {
     const groupX = (groupCoords[0] || 0) * SCALE;        // Radial position from center to group center
     const groupZ = (groupCoords[1] || 0) * SCALE;        // Height position (Z)
     const groupWidth = (groupDims[0]) * SCALE;
-    let groupDepth = (coil.bobbin.processedDescription.columnDepth) * SCALE;
-    console.log('groupDepth', groupDepth);
+    let groupDepth = (bobbinDescription.columnDepth || 0) * SCALE;
     
     let maximumLayerWidth = 0;
     for (const layer of coil.groupsDescription) {
@@ -939,7 +940,6 @@ export class ReplicadBuilder {
     const groupHeight = (groupDims[1] || 0.001) * SCALE;   // FR4 thickness (height in Z direction)
 
 
-    console.log('getFR4Board2 coil:', coil);
     // Use group dimensions[1] as thickness (matching 2D painter), or override if provided
     // Apply minimum thickness of 0.5mm to avoid z-fighting with wires
     const MIN_FR4_THICKNESS = 0.5;  // mm
@@ -1034,17 +1034,15 @@ export class ReplicadBuilder {
     }
 
     // Build coil turns
-    console.log('magneticData:', magneticData);
     const coilData = magneticData.coil || magneticData || {};
-    console.log('coilData after assignment:', coilData);
     const bobbinData = coilData.bobbin || {};
-    
+
     let bobbinProcessed;
     if (typeof bobbinData === 'string') {
-      bobbinProcessed = new BobbinProcessedDescription();
+      bobbinProcessed = bobbinFromDict({});
     } else {
       const bobbinProcessedData = bobbinData.processedDescription || {};
-      bobbinProcessed = BobbinProcessedDescription.fromDict(bobbinProcessedData);
+      bobbinProcessed = bobbinFromDict(bobbinProcessedData);
     }
 
     // Build bobbin if not toroidal and not a planar transformer
@@ -1054,7 +1052,7 @@ export class ReplicadBuilder {
     
     for (const groupData of groupsData) {
       const groupType = groupData.type || '';
-      if (groupType === WiringTechnology.PRINTED || 
+      if (groupType === WiringTechnology.Printed || 
           groupType === 'Printed' || 
           groupType?.toLowerCase() === 'printed') {
         isPlanar = true;
@@ -1074,7 +1072,7 @@ export class ReplicadBuilder {
     if (isPlanar) {
       console.log('Building FR4, isPlanar:', isPlanar, 'groupsData:', groupsData.length);
       for (const groupData of groupsData) {
-        const groupDesc = GroupDescription.fromDict(groupData);
+        const groupDesc = groupFromDict(groupData);
         
         try {
           const fr4Board = this.getFR4Board(coilData);
@@ -1088,19 +1086,19 @@ export class ReplicadBuilder {
     }
 
     // Get wire info
-    let wireDesc = new WireDescription({ wireType: WireType.ROUND });
+    let wireDesc = { type: WireType.Round, numberConductors: 1 };
     const functionalDesc = coilData.functionalDescription || [];
     if (functionalDesc.length > 0) {
       const wireData = functionalDesc[0].wire || {};
       if (Object.keys(wireData).length > 0) {
-        wireDesc = WireDescription.fromDict(wireData);
+        wireDesc = wireFromDict(wireData);
       }
     }
 
     // Build turns
     const turnsData = coilData.turnsDescription || [];
     for (const turnData of turnsData) {
-      const turnDesc = TurnDescription.fromDict(turnData);
+      const turnDesc = turnFromDict(turnData);
 
       // Get wire dimensions from turn data if available
       if (turnData.dimensions) {
@@ -1110,13 +1108,14 @@ export class ReplicadBuilder {
           const crossShape = (turnData.crossSectionalShape || '').toLowerCase();
           const isRectangular = crossShape === 'rectangular' || crossShape === 'foil' || crossShape === 'planar';
           
-          wireDesc = new WireDescription({
-            type: isRectangular ? WireType.RECTANGULAR : WireType.ROUND,
+          wireDesc = {
+            type: isRectangular ? WireType.Rectangular : WireType.Round,
             outerDiameter: dims[0],
             conductingDiameter: dims[0],
             outerWidth: dims[0],
-            outerHeight: dims[1]
-          });
+            outerHeight: dims[1],
+            numberConductors: 1
+          };
         }
       }
 
