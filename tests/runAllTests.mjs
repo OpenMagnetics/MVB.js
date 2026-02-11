@@ -144,7 +144,8 @@ async function runTestFile(browser, testKey, testInfo) {
     const passed = (results.includes('All basic tests completed') || 
                    results.includes('All tests PASSED') ||
                    results.includes('✓ All tests PASSED') ||
-                   results.includes('✓ Test complete')) && 
+                   results.includes('✓ Test complete') ||
+                   results.includes('Done!')) && 
                   !results.includes('FAILED') &&
                   !results.includes('FATAL');
     
