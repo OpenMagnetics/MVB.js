@@ -158,7 +158,17 @@ export class ReplicadBuilder {
       }
       wireRadius = Math.min(wireWidth, wireHeight) / 2.0;
     } else {
-      const od = getNumericValue(wireDescription.outerDiameter) || getNumericValue(wireDescription.conductingDiameter) || 0.001;
+      // Get wire diameter from wireDescription, or fall back to turnDescription.dimensions
+      let od = getNumericValue(wireDescription.outerDiameter) || getNumericValue(wireDescription.conductingDiameter);
+      
+      // Fallback to turn dimensions if wire dimensions are missing
+      if (!od && turnDescription.dimensions && turnDescription.dimensions.length >= 1) {
+        od = turnDescription.dimensions[0];
+      }
+      
+      // Final fallback to default
+      if (!od) od = 0.001;
+      
       const wireDiameter = od * SCALE;
       wireRadius = wireDiameter / 2.0;
       wireWidth = wireDiameter;
@@ -418,7 +428,17 @@ export class ReplicadBuilder {
       }
       wireRadius = Math.min(wireWidth, wireHeight) / 2.0;
     } else {
-      const od = getNumericValue(wireDescription.outerDiameter) || getNumericValue(wireDescription.conductingDiameter) || 0.001;
+      // Get wire diameter from wireDescription, or fall back to turnDescription.dimensions
+      let od = getNumericValue(wireDescription.outerDiameter) || getNumericValue(wireDescription.conductingDiameter);
+      
+      // Fallback to turn dimensions if wire dimensions are missing
+      if (!od && turnDescription.dimensions && turnDescription.dimensions.length >= 1) {
+        od = turnDescription.dimensions[0];
+      }
+      
+      // Final fallback to default
+      if (!od) od = 0.001;
+      
       const wireDiameter = od * SCALE;
       wireRadius = wireDiameter / 2.0;
       wireWidth = wireDiameter;
