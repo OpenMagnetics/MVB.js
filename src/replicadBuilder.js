@@ -963,23 +963,30 @@ export class ReplicadBuilder {
     // Use group dimensions[1] as thickness (matching 2D painter), or override if provided
     // Apply minimum thickness of 0.5mm to avoid z-fighting with wires
     const MIN_FR4_THICKNESS = 0.5;  // mm
-    const fr4Thickness = Math.max(groupHeight, MIN_FR4_THICKNESS);
+    // Subtract 0.004mm (4μm total) to create 2μm gap on top and bottom so FR4 doesn't clip with turns
+    // This prevents visual artifacts when the FR4 plane and turn planes share the same Z coordinates
+    const fr4Thickness = Math.max(groupHeight - 0.004, MIN_FR4_THICKNESS - 0.004);
 
     // Get column dimensions
     const colWidth = (bobbinDescription.columnWidth || 0.002) * SCALE;
     const colDepth = (bobbinDescription.columnDepth || 0.002) * SCALE;
     const columnShape = bobbinDescription.columnShape?.toLowerCase() || 'rectangular';
 
+    // Get planar-specific margins (convert from meters to mm)
+    // Default values from MKF Defaults.h: minimumBorderToWireDistance = 90e-6, coreToLayerDistance = 250e-6
+    const borderToWireDistance = (coil.borderToWireDistance || 90e-6) * SCALE;
+    const coreToLayerDistance = (coil.coreToLayerDistance || 250e-6) * SCALE;
+
     // Calculate inner and outer radii/edges from group position
     // groupX is the CENTER of the group in the radial direction
     // Inner edge = groupX - groupWidth/2 (where group starts, near column)
     // Outer edge = groupX + groupWidth/2 (where group ends, away from column)
     const innerRadius = groupX - groupWidth / 2;
-    const outerRadius = groupX + groupWidth / 2;
+    // Extend outer edge by borderToWireDistance to create margin beyond the wire
+    const outerRadius = groupX + groupWidth / 2 + borderToWireDistance;
     
-    // Add small clearance for the hole
-    const holeMargin = 0.2;  // mm clearance
-    const holeInnerRadius = innerRadius - holeMargin;
+    // Use coreToLayerDistance for the hole margin (distance from PCB edge to core)
+    const holeInnerRadius = innerRadius - coreToLayerDistance;
 
     let fr4Board;
 
@@ -994,9 +1001,57 @@ export class ReplicadBuilder {
         .translate([0, 0, groupZ - fr4Thickness / 2 - 1]);
       
       fr4Board = outerDisk.cut(innerHole);
+    } else if (columnShape === 'oblong') {
+      // For oblong columns (like EL cores), create a stadium-shaped hole
+      // Two semicircles at the ends joined by a rectangle
+      const boardFullWidth = outerRadius * 2;   // X dimension (symmetric)
+      const boardFullDepth = groupDepth * 2;   // Y dimension
+      
+      fr4Board = this._makeBox(boardFullWidth, boardFullDepth, fr4Thickness)
+        .translate([0, 0, groupZ]);
+
+      // Stadium (racetrack) shaped hole for oblong column
+      // The column is longer in Y direction (columnDepth) and narrower in X (columnWidth)
+      // The semicircles are at the ±Y ends, with the straight section along Y
+      // Note: colWidth and colDepth are already halved values (radii)
+      const fullColWidth = colWidth * 2;  // Full column width
+      const fullColDepth = colDepth * 2;  // Full column depth  
+      const holeRadius = colWidth + coreToLayerDistance;  // Semicircle radius (colWidth is already half)
+      const straightLength = fullColDepth - fullColWidth;  // Length of straight section between semicircles
+      
+      console.log('[FR4 Debug] Oblong hole values:', {
+        colWidth,
+        colDepth,
+        fullColWidth,
+        fullColDepth,
+        coreToLayerDistance,
+        holeRadius,
+        straightLength,
+        boardFullWidth,
+        boardFullDepth,
+        fr4Thickness,
+        groupZ
+      });
+      
+      // Central rectangular part (width = 2*holeRadius in X, length = straightLength in Y)
+      const centralRect = this._makeBox(holeRadius * 2, straightLength, fr4Thickness + 2)
+        .translate([0, 0, groupZ]);
+      
+      // Top semicircle (at Y = +straightLength/2)
+      // Cylinder needs to be centered in Z like the box
+      const topSemicircle = makeCylinder(holeRadius, fr4Thickness + 2, [0, straightLength / 2, groupZ - (fr4Thickness + 2) / 2]);
+      
+      // Bottom semicircle (at Y = -straightLength/2)
+      const bottomSemicircle = makeCylinder(holeRadius, fr4Thickness + 2, [0, -straightLength / 2, groupZ - (fr4Thickness + 2) / 2]);
+      
+      // Combine all hole parts
+      const stadiumHole = centralRect.fuse(topSemicircle).fuse(bottomSemicircle);
+      
+      fr4Board = fr4Board.cut(stadiumHole);
     } else {
-      // For rectangular/oblong columns, create a rectangular board with rectangular hole
+      // For rectangular columns, create a rectangular board with rectangular hole
       // The board extends symmetrically around the column
+      // outerRadius already includes borderToWireDistance from line 985
       const boardFullWidth = outerRadius * 2;   // X dimension (symmetric)
       const boardFullDepth = groupDepth * 2;   // Y dimension (assume square for rectangular column)
       
@@ -1004,8 +1059,9 @@ export class ReplicadBuilder {
         .translate([0, 0, groupZ]);
 
       // Rectangular hole sized to match the inner edge of the winding area
-      const holeWidth = holeInnerRadius * 2;
-      const holeDepth = (colDepth + holeMargin) * 2;  // Use column depth for Y
+      // Use coreToLayerDistance for the hole margin (distance from PCB edge to core)
+      const holeWidth = (innerRadius - coreToLayerDistance) * 2;
+      const holeDepth = (colDepth + coreToLayerDistance) * 2;  // Use column depth + coreToLayerDistance for Y
       const centralHole = this._makeBox(holeWidth, holeDepth, fr4Thickness + 2)
         .translate([0, 0, groupZ]);
 
@@ -1097,7 +1153,8 @@ export class ReplicadBuilder {
         try {
           const fr4Board = this.getFR4Board(coilData);
           if (fr4Board !== null) {
-            allPieces.push(fr4Board);
+            // FR4 board temporarily hidden for debugging
+            // allPieces.push(fr4Board);
           }
         } catch (err) {
           console.warn('[MVB] Could not build FR4 board:', err.message);
